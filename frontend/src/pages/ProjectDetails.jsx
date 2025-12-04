@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getProjectById, getMembers, deleteProject } from "../api/admin";
 import Navbar from "../components/Navbar";
@@ -6,7 +6,7 @@ import Sidebar from "../components/Sidebar";
 import TaskList from "../components/TaskList";
 import TaskModal from "../components/TaskModal";
 import ProjectModal from "../components/ProjectModal";
-import MemberAssignmentModal from "../components/MemberAssignmentModal"; // New import
+import MemberAssignmentModal from "../components/MemberAssignmentModal";
 
 const ProjectDetails = () => {
   const token = localStorage.getItem("token");
@@ -17,7 +17,9 @@ const ProjectDetails = () => {
   const [allMembers, setAllMembers] = useState([]);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
-  const [isMemberModalOpen, setIsMemberModalOpen] = useState(false); // New state for member modal
+  const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
+  const [taskToEdit, setTaskToEdit] = useState(null); // New state for editing
+  const [sortKey, setSortKey] = useState('due_date'); // New state for sorting
 
   const fetchProjectDetails = async () => {
     const res = await getProjectById(id, token);
@@ -51,6 +53,37 @@ const ProjectDetails = () => {
     fetchProjectDetails(); // Refresh details after member update
   };
 
+  const handleTaskEdit = (task) => {
+    setTaskToEdit(task);
+    setIsTaskModalOpen(true);
+  };
+
+  const handleTaskModalClose = () => {
+    setIsTaskModalOpen(false);
+    setTaskToEdit(null);
+  };
+
+  // Sorting logic
+  const sortedTasks = useMemo(() => {
+    if (!project || !project.tasks) return [];
+
+    const tasksCopy = [...project.tasks];
+    
+    tasksCopy.sort((a, b) => {
+      if (sortKey === 'due_date') {
+        const dateA = a.due_date ? new Date(a.due_date).getTime() : Infinity;
+        const dateB = b.due_date ? new Date(b.due_date).getTime() : Infinity;
+        return dateA - dateB;
+      } else if (sortKey === 'priority') {
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        return priorityOrder[b.priority.toLowerCase()] - priorityOrder[a.priority.toLowerCase()];
+      }
+      return 0;
+    });
+
+    return tasksCopy;
+  }, [project, sortKey]);
+
   if (!project) return (
     <div className="flex">
       <Sidebar />
@@ -60,6 +93,9 @@ const ProjectDetails = () => {
       </div>
     </div>
   );
+
+  // Filter all members to only include those assigned to the project for task assignment
+  const projectMembers = project.members || [];
 
   return (
     <div className="flex min-h-screen bg-gray-100">
@@ -72,22 +108,24 @@ const ProjectDetails = () => {
           {role === 'admin' && (
             <div className="flex space-x-3">
               <button
+                onClick={() => setIsTaskModalOpen(true)}
+                className="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition duration-200"
+              >
+                + Add New Task
+              </button>
+
+              <button
                 onClick={() => setIsProjectModalOpen(true)}
                 className="py-2 px-4 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-lg shadow-md transition duration-200"
               >
                 Edit Project
               </button>
+
               <button
                 onClick={handleDeleteProject}
                 className="py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-md transition duration-200"
               >
                 Delete Project
-              </button>
-              <button
-                onClick={() => setIsTaskModalOpen(true)}
-                className="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition duration-200"
-              >
-                + Add New Task
               </button>
             </div>
           )}
@@ -109,8 +147,8 @@ const ProjectDetails = () => {
             )}
           </div>
           <ul className="flex flex-wrap gap-2 mt-1">
-            {project.members.length > 0 ? (
-              project.members.map(m => (
+            {projectMembers.length > 0 ? (
+              projectMembers.map(m => (
                 <li key={m.id} className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
                   {m.name}
                 </li>
@@ -122,9 +160,23 @@ const ProjectDetails = () => {
         </div>
 
         <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">Tasks ({project.tasks.length})</h2>
-          {project.tasks.length > 0 ? (
-            <TaskList tasks={project.tasks} onTaskUpdated={fetchProjectDetails} />
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold">Tasks ({project.tasks.length})</h2>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">Sort by:</span>
+              <select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value)}
+                className="p-1 border rounded text-sm"
+              >
+                <option value="due_date">Due Date</option>
+                <option value="priority">Priority</option>
+              </select>
+            </div>
+          </div>
+          
+          {sortedTasks.length > 0 ? (
+            <TaskList tasks={sortedTasks} onTaskUpdated={fetchProjectDetails} onTaskEdit={handleTaskEdit} />
           ) : (
             <p className="text-gray-500">No tasks for this project.</p>
           )}
@@ -145,10 +197,11 @@ const ProjectDetails = () => {
         {/* Modals */}
         <TaskModal
           projectId={id}
-          members={allMembers}
+          members={projectMembers} // Only project members can be assigned tasks
+          taskToEdit={taskToEdit}
           isOpen={isTaskModalOpen}
-          onClose={() => setIsTaskModalOpen(false)}
-          onTaskAdded={fetchProjectDetails}
+          onClose={handleTaskModalClose}
+          onTaskSaved={fetchProjectDetails}
         />
 
         <ProjectModal
@@ -160,7 +213,7 @@ const ProjectDetails = () => {
 
         <MemberAssignmentModal
           projectId={id}
-          projectMembers={project.members}
+          projectMembers={projectMembers}
           allMembers={allMembers}
           isOpen={isMemberModalOpen}
           onClose={() => setIsMemberModalOpen(false)}

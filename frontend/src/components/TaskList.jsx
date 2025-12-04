@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { getTaskComments, addComment, updateTaskStatus } from '../api/member';
+import { deleteTask } from '../api/admin'; // New import
 
-const TaskItem = ({ task, onTaskUpdated }) => {
+const TaskItem = ({ task, onTaskUpdated, onTaskEdit }) => {
   const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [showComments, setShowComments] = useState(false);
@@ -24,6 +26,13 @@ const TaskItem = ({ task, onTaskUpdated }) => {
     onTaskUpdated();
   };
 
+  const handleDelete = async () => {
+    if (window.confirm(`Are you sure you want to delete task: ${task.title}?`)) {
+      await deleteTask(task.id, token);
+      onTaskUpdated();
+    }
+  };
+
   useEffect(() => {
     if (showComments) {
       fetchComments();
@@ -31,7 +40,7 @@ const TaskItem = ({ task, onTaskUpdated }) => {
   }, [showComments]);
 
   const getPriorityColor = (priority) => {
-    switch (priority) {
+    switch (priority.toLowerCase()) {
       case 'high': return 'text-red-600 font-bold';
       case 'medium': return 'text-yellow-600';
       case 'low': return 'text-green-600';
@@ -48,6 +57,7 @@ const TaskItem = ({ task, onTaskUpdated }) => {
           <p className={`text-xs ${getPriorityColor(task.priority)}`}>Priority: {task.priority}</p>
           <p className="text-xs text-gray-500">Due: {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}</p>
           {task.project_name && <p className="text-xs text-blue-500">Project: {task.project_name}</p>}
+          <p className="text-xs text-gray-500">Assigned to: {task.assignee_name || 'Unassigned'}</p>
         </div>
         <div className="flex flex-col items-end space-y-2">
           <select
@@ -59,6 +69,24 @@ const TaskItem = ({ task, onTaskUpdated }) => {
             <option value="in_progress">In Progress</option>
             <option value="completed">Completed</option>
           </select>
+          
+          {role === 'admin' && (
+            <div className="flex space-x-2">
+              <button
+                onClick={() => onTaskEdit(task)}
+                className="text-indigo-600 hover:text-indigo-900 text-sm"
+              >
+                Edit
+              </button>
+              <button
+                onClick={handleDelete}
+                className="text-red-600 hover:text-red-900 text-sm"
+              >
+                Delete
+              </button>
+            </div>
+          )}
+
           <button
             onClick={() => setShowComments(!showComments)}
             className="text-blue-500 text-sm hover:underline"
@@ -98,11 +126,11 @@ const TaskItem = ({ task, onTaskUpdated }) => {
   );
 };
 
-const TaskList = ({ tasks, onTaskUpdated }) => {
+const TaskList = ({ tasks, onTaskUpdated, onTaskEdit }) => {
   return (
     <ul className="border rounded-lg overflow-hidden shadow-md">
       {tasks.map(t => (
-        <TaskItem key={t.id} task={t} onTaskUpdated={onTaskUpdated} />
+        <TaskItem key={t.id} task={t} onTaskUpdated={onTaskUpdated} onTaskEdit={onTaskEdit} />
       ))}
     </ul>
   );

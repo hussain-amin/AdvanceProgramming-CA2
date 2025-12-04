@@ -45,10 +45,14 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="dashboard-container">
-      <Sidebar userName={userName} />
-      <div className="dashboard-main">
+    <main className="dashboard-container">
+      <section className="sidebar-section">
+        <Sidebar userName={userName} />
+      </section>
+
+      <section className="content-section">
         <Navbar userName={userName} />
+
         <div className="dashboard-content">
           <div className="dashboard-header">
             <h1>Admin Dashboard</h1>
@@ -133,8 +137,8 @@ const AdminDashboard = () => {
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 };
 

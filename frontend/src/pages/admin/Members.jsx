@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-import Sidebar from "../components/Sidebar";
-import { getMembers, deleteMember, updateMember, createMember } from "../api/admin";
+import { getMembers, deleteMember, updateMember, createMember } from "../../api/admin";
 
-// Reusable MemberForm component (moved from the previous Members.jsx)
+// Reusable MemberForm component
 const MemberForm = ({ onMemberSaved, memberToEdit, setMemberToEdit, onClose }) => {
   const token = localStorage.getItem("token");
   const [formData, setFormData] = useState({
@@ -19,7 +18,7 @@ const MemberForm = ({ onMemberSaved, memberToEdit, setMemberToEdit, onClose }) =
       setFormData({
         name: memberToEdit.name || "",
         email: memberToEdit.email || "",
-        password: "", // Password should not be pre-filled
+        password: "",
         role: memberToEdit.role || "member",
       });
     } else {
@@ -44,21 +43,19 @@ const MemberForm = ({ onMemberSaved, memberToEdit, setMemberToEdit, onClose }) =
     try {
       let result;
       if (memberToEdit) {
-        // Update member
         const updateData = { name: formData.name, email: formData.email, role: formData.role };
         if (formData.password) {
           updateData.password = formData.password;
         }
         result = await updateMember(memberToEdit.id, updateData, token);
       } else {
-        // Create new member
         result = await createMember(formData, token);
       }
 
       if (result.msg) {
         setMessage({ type: "success", text: result.msg });
         onMemberSaved();
-        onClose(); // Close modal on success
+        onClose();
       } else {
         setMessage({ type: "error", text: result.msg || "Operation failed." });
       }
@@ -107,7 +104,7 @@ const MemberForm = ({ onMemberSaved, memberToEdit, setMemberToEdit, onClose }) =
           placeholder={memberToEdit ? "New Password (optional)" : "Password"}
           value={formData.password}
           onChange={handleChange}
-          required={!memberToEdit && !memberToEdit} // Require password only for new members
+          required={!memberToEdit}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
         />
         <select
@@ -154,13 +151,11 @@ const MemberModal = ({ memberToEdit, isOpen, onClose, onMemberSaved }) => {
         />
       </div>
     </div>
-   );
+  );
 };
-
 
 const Members = () => {
   const token = localStorage.getItem("token");
-  const userName = localStorage.getItem("userName");
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [memberToEdit, setMemberToEdit] = useState(null);
@@ -200,78 +195,72 @@ const Members = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      <Sidebar />
-      <div className="flex-1 p-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">Manage Members</h1>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition duration-200"
-          >
-            + Add New Member
-          </button>
-        </div>
-
-        <div className="lg:col-span-2">
-          <h2 className="text-2xl font-semibold mb-4">Member List</h2>
-          {loading ? (
-            <p className="text-gray-500">Loading members...</p>
-          ) : (
-            <div className="bg-white shadow-lg rounded-xl overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {members.map((member) => (
-                    <tr key={member.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {member.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {member.email}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${member.role === 'admin' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-800'}`}>
-                          {member.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                        <button
-                          onClick={() => handleEdit(member)}
-                          className="text-indigo-600 hover:text-indigo-900"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(member.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-        
-        {/* Member Creation/Edit Modal */}
-        <MemberModal
-          memberToEdit={memberToEdit}
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          onMemberSaved={handleMemberSaved}
-        />
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-800">Manage Members</h1>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition duration-200"
+        >
+          + Add New Member
+        </button>
       </div>
+
+      <div className="bg-white shadow-lg rounded-xl overflow-hidden">
+        <h2 className="text-2xl font-semibold p-6 border-b">Member List</h2>
+        {loading ? (
+          <p className="text-gray-500 p-6">Loading members...</p>
+        ) : (
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {members.map((member) => (
+                <tr key={member.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {member.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {member.email}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${member.role === 'admin' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-800'}`}>
+                      {member.role}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                    <button
+                      onClick={() => handleEdit(member)}
+                      className="text-indigo-600 hover:text-indigo-900"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(member.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <MemberModal
+        memberToEdit={memberToEdit}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onMemberSaved={handleMemberSaved}
+      />
     </div>
   );
 };

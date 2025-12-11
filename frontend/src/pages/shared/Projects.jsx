@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import Sidebar from "../components/Sidebar";
-import ProjectCard from "../components/ProjectCard";
-import ProjectModal from "../components/ProjectModal"; // New import
-import { getMemberProjects } from "../api/member";
-import { getProjects } from "../api/admin";
+import Sidebar from "../../components/Sidebar";
+import ProjectCard from "../../components/ProjectCard";
+import ProjectModal from "../../components/ProjectModal"; // New import
+import { getMemberProjects } from "../../api/member";
+import { getProjects } from "../../api/admin";
 
 const Projects = () => {
   const token = localStorage.getItem("token");

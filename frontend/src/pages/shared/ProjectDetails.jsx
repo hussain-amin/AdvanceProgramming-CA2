@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getProjectById, getMembers, deleteProject } from "../api/admin";
-import Sidebar from "../components/Sidebar";
-import TaskList from "../components/TaskList";
-import TaskModal from "../components/TaskModal";
-import ProjectModal from "../components/ProjectModal";
-import MemberAssignmentModal from "../components/MemberAssignmentModal";
+import { getProjectById, getMembers, deleteProject } from "../../api/admin";
+import Sidebar from "../../components/Sidebar";
+import TaskList from "../../components/TaskList";
+import TaskModal from "../../components/TaskModal";
+import ProjectModal from "../../components/ProjectModal";
+import MemberAssignmentModal from "../../components/MemberAssignmentModal";
 
 const ProjectDetails = () => {
   const token = localStorage.getItem("token");

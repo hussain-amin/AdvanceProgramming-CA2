@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getProjects, getMembers } from "../api/admin";
-import "../styles/Dashboard.css";
+import { getProjects, getMembers } from "../../api/admin";
+import "../../styles/Dashboard.css";
 
 const AdminDashboard = () => {
   const [projects, setProjects] = useState([]);

@@ -64,12 +64,12 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
-import AdminDashboard from "./pages/AdminDashboard";
-import MemberDashboard from "./pages/MemberDashboard";
-import Projects from "./pages/Projects";
-import ProjectDetails from "./pages/ProjectDetails";
-import Members from "./pages/Members";
-import Reports from "./pages/Reports";
+import AdminDashboard from "./pages/admin/Dashboard";
+import MemberDashboard from "./pages/member/Dashboard";
+import Projects from "./pages/shared/Projects";
+import ProjectDetails from "./pages/shared/ProjectDetails";
+import Members from "./pages/admin/Members";
+import Reports from "./pages/admin/Reports";
 import Login from "./pages/Login";
 
 // Inner component that uses useLocation

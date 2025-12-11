@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
-import Sidebar from "../components/Sidebar";
 import { getProjects, getMembers } from "../api/admin";
 import "../styles/Dashboard.css";
 
@@ -45,100 +43,90 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <main className="dashboard-container">
-      <section className="sidebar-section">
-        <Sidebar userName={userName} />
-      </section>
+    <div className="dashboard-content">
+      <div className="dashboard-header">
+        <h1>Admin Dashboard</h1>
+        <p>Manage projects, members, and tasks</p>
+      </div>
 
-      <section className="content-section">
-        <Navbar userName={userName} />
-
-        <div className="dashboard-content">
-          <div className="dashboard-header">
-            <h1>Admin Dashboard</h1>
-            <p>Manage projects, members, and tasks</p>
+      <div className="stats-grid">
+        {stats.map((stat, idx) => (
+          <div key={idx} className="stat-card">
+            <div className="stat-value" style={{ color: stat.color }}>
+              {stat.value}
+            </div>
+            <div className="stat-label">{stat.label}</div>
           </div>
+        ))}
+      </div>
 
-          <div className="stats-grid">
-            {stats.map((stat, idx) => (
-              <div key={idx} className="stat-card">
-                <div className="stat-value" style={{ color: stat.color }}>
-                  {stat.value}
+      <div className="dashboard-section">
+        <div className="section-header">
+          <h2>Projects</h2>
+          <Link to="/projects" className="btn-primary">
+            Manage Projects
+          </Link>
+        </div>
+
+        {loading ? (
+          <p>Loading projects...</p>
+        ) : projects.length > 0 ? (
+          <div className="projects-grid">
+            {projects.slice(0, 3).map((project) => (
+              <div key={project.id} className="project-card">
+                <h3>{project.name}</h3>
+                <p className="project-description">{project.description}</p>
+                <div className="project-meta">
+                  <span className="priority-badge" style={{ background: getPriorityColor(project.priority) }}>
+                    {project.priority}
+                  </span>
+                  {project.deadline && (
+                    <span className="deadline">
+                      {new Date(project.deadline).toLocaleDateString()}
+                    </span>
+                  )}
                 </div>
-                <div className="stat-label">{stat.label}</div>
+                <Link to={`/projects/${project.id}`} className="btn-secondary">
+                  View Details
+                </Link>
               </div>
             ))}
           </div>
+        ) : (
+          <p className="no-data">No projects yet. Create one to get started.</p>
+        )}
+      </div>
 
-          <div className="dashboard-section">
-            <div className="section-header">
-              <h2>Projects</h2>
-              <Link to="/projects" className="btn-primary">
-                Manage Projects
-              </Link>
-            </div>
-
-            {loading ? (
-              <p>Loading projects...</p>
-            ) : projects.length > 0 ? (
-              <div className="projects-grid">
-                {projects.slice(0, 3).map((project) => (
-                  <div key={project.id} className="project-card">
-                    <h3>{project.name}</h3>
-                    <p className="project-description">{project.description}</p>
-                    <div className="project-meta">
-                      <span className="priority-badge" style={{ background: getPriorityColor(project.priority) }}>
-                        {project.priority}
-                      </span>
-                      {project.deadline && (
-                        <span className="deadline">
-                          {new Date(project.deadline).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                    <Link to={`/projects/${project.id}`} className="btn-secondary">
-                      View Details
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="no-data">No projects yet. Create one to get started.</p>
-            )}
-          </div>
-
-          <div className="dashboard-section">
-            <div className="section-header">
-              <h2>Team Members</h2>
-              <Link to="/members" className="btn-primary">
-                Manage Members
-              </Link>
-            </div>
-
-            {loading ? (
-              <p>Loading members...</p>
-            ) : members.length > 0 ? (
-              <div className="members-list">
-                {members.slice(0, 5).map((member) => (
-                  <div key={member.id} className="member-item">
-                    <div className="member-info">
-                      <div className="member-avatar">{member.name.charAt(0).toUpperCase()}</div>
-                      <div>
-                        <h4>{member.name}</h4>
-                        <p>{member.email}</p>
-                      </div>
-                    </div>
-                    <span className="role-badge">{member.role}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="no-data">No members yet.</p>
-            )}
-          </div>
+      <div className="dashboard-section">
+        <div className="section-header">
+          <h2>Team Members</h2>
+          <Link to="/members" className="btn-primary">
+            Manage Members
+          </Link>
         </div>
-      </section>
-    </main>
+
+        {loading ? (
+          <p>Loading members...</p>
+        ) : members.length > 0 ? (
+          <div className="members-list">
+            {members.slice(0, 5).map((member) => (
+              <div key={member.id} className="member-item">
+                <div className="member-info">
+                  <div className="member-avatar">{member.name.charAt(0).toUpperCase()}</div>
+                  <div>
+                    <h4>{member.name}</h4>
+                    <p>{member.email}</p>
+                  </div>
+                </div>
+                <span className="role-badge">{member.role}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="no-data">No members yet.</p>
+        )}
+      </div>
+    </div>
   );
 };
 

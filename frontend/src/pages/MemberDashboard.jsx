@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import TaskList from "../components/TaskList";
 import { getMyTasks } from "../api/member";
@@ -30,8 +29,6 @@ const MemberDashboard = () => {
       </section>
 
       <section className="content-section">
-        <Navbar userName={userName} />
-
         <div className="dashboard-content">
           <h1>Welcome, {userName}!</h1>
 

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import ProjectCard from "../components/ProjectCard";
 import ProjectModal from "../components/ProjectModal"; // New import
@@ -44,7 +43,6 @@ const Projects = () => {
       <div className="flex min-h-screen bg-gray-100">
         <Sidebar />
         <div className="flex-1 p-8">
-          <Navbar userName={userName} />
           <p className="text-center text-gray-500">Loading projects...</p>
         </div>
       </div>
@@ -56,7 +54,6 @@ const Projects = () => {
       <div className="flex min-h-screen bg-gray-100">
         <Sidebar />
         <div className="flex-1 p-8">
-          <Navbar userName={userName} />
           <p className="text-center text-red-500">{error}</p>
         </div>
       </div>
@@ -67,8 +64,6 @@ const Projects = () => {
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
       <div className="flex-1 p-8">
-        <Navbar userName={userName} />
-        
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800">
             {role === "admin" ? "All Projects" : "My Assigned Projects"}

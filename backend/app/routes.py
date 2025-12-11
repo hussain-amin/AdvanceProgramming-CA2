@@ -548,3 +548,48 @@ def add_attachment(task_id):
     db.session.add(attachment)
     db.session.commit()
     return jsonify({"msg": "Attachment added"})
+
+
+# ====================================== #
+# ============ REPORT ROUTES =========== #
+# ====================================== #
+
+@main.route('/admin/reports/stats', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_report_stats():
+    # 1. Summary Counts
+    total_projects = Project.query.count()
+    total_tasks = Task.query.count()
+    total_members = User.query.filter_by(role='member').count()
+    
+    # 2. Task Status Distribution
+    tasks_by_status = db.session.query(Task.status, db.func.count(Task.status)).group_by(Task.status).all()
+    status_data = {status: count for status, count in tasks_by_status}
+    
+    # 3. Task Priority Distribution
+    tasks_by_priority = db.session.query(Task.priority, db.func.count(Task.priority)).group_by(Task.priority).all()
+    priority_data = {priority: count for priority, count in tasks_by_priority}
+    
+    # 4. Completion Rate
+    completed_tasks = status_data.get('completed', 0)
+    completion_rate = round((completed_tasks / total_tasks * 100), 1) if total_tasks > 0 else 0
+
+    return jsonify({
+        "summary": {
+            "total_projects": total_projects,
+            "total_tasks": total_tasks,
+            "total_members": total_members,
+            "completion_rate": completion_rate
+        },
+        "status_distribution": [
+            {"name": "To Do", "value": status_data.get('todo', 0), "color": "#FF8042"},
+            {"name": "In Progress", "value": status_data.get('in_progress', 0), "color": "#0088FE"},
+            {"name": "Completed", "value": status_data.get('completed', 0), "color": "#00C49F"}
+        ],
+        "priority_distribution": [
+            {"name": "Low", "value": priority_data.get('low', 0)},
+            {"name": "Medium", "value": priority_data.get('medium', 0)},
+            {"name": "High", "value": priority_data.get('high', 0)}
+        ]
+    })

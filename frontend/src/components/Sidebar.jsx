@@ -25,7 +25,7 @@ const Sidebar = () => {
   ];
 
   return (
-    <div className="flex flex-col w-64 bg-gray-800 text-white h-screen shadow-2xl">
+      <div className="fixed left-0 top-0 flex flex-col w-64 bg-gray-800 text-white h-screen shadow-2xl z-40">
       <div className="p-6 text-2xl font-bold border-b border-gray-700">
         PM Portal
       </div>

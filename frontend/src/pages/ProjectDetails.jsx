@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getProjectById, getMembers, deleteProject } from "../api/admin";
-import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import TaskList from "../components/TaskList";
 import TaskModal from "../components/TaskModal";
@@ -88,7 +87,6 @@ const ProjectDetails = () => {
     <div className="flex">
       <Sidebar />
       <div className="flex-1 p-8">
-        <Navbar />
         <p className="text-center text-gray-500">Loading project details...</p>
       </div>
     </div>
@@ -101,8 +99,6 @@ const ProjectDetails = () => {
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
       <div className="flex-1 p-8">
-        <Navbar />
-        
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-3xl font-bold">{project.name}</h1>
           {role === 'admin' && (

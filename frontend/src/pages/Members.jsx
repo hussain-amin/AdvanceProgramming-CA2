@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import { getMembers, deleteMember, updateMember, createMember } from "../api/admin";
 
@@ -204,8 +203,6 @@ const Members = () => {
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
       <div className="flex-1 p-8">
-        <Navbar userName={userName} />
-        
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800">Manage Members</h1>
           <button

@@ -25,7 +25,12 @@ def create_app():
     migrate.init_app(app, db)
 
     from . import models
-    from .routes import main
+    from .routes import main, admin, member, shared
+    
+    # Register all blueprints
     app.register_blueprint(main)
+    app.register_blueprint(admin)
+    app.register_blueprint(member)
+    app.register_blueprint(shared)
 
     return app

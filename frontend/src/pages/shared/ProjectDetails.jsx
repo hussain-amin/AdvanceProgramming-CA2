@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getProjectById, getMembers, deleteProject } from "../../api/admin";
+import { getProjectDetails as getMemberProjectDetails } from "../../api/member";
 import Sidebar from "../../components/Sidebar";
 import TaskList from "../../components/TaskList";
 import TaskModal from "../../components/TaskModal";
 import ProjectModal from "../../components/ProjectModal";
 import MemberAssignmentModal from "../../components/MemberAssignmentModal";
+import ProjectCompletionModal from "../../components/ProjectCompletionModal";
 
 const ProjectDetails = () => {
   const token = localStorage.getItem("token");
@@ -17,12 +19,23 @@ const ProjectDetails = () => {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
+  const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState(null); // New state for editing
   const [sortKey, setSortKey] = useState('due_date'); // New state for sorting
 
   const fetchProjectDetails = async () => {
-    const res = await getProjectById(id, token);
-    setProject(res.project);
+    try {
+      let res;
+      if (role === 'admin') {
+        res = await getProjectById(id, token);
+      } else {
+        // Member uses their own endpoint
+        res = await getMemberProjectDetails(id, token);
+      }
+      setProject(res.project);
+    } catch (error) {
+      console.error("Error fetching project details:", error);
+    }
   };
 
   const fetchAllMembers = async () => {
@@ -105,17 +118,36 @@ const ProjectDetails = () => {
             <div className="flex space-x-3">
               <button
                 onClick={() => setIsTaskModalOpen(true)}
-                className="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition duration-200"
+                disabled={project.completion_date}
+                className={`py-2 px-4 font-semibold rounded-lg shadow-md transition duration-200 ${
+                  project.completion_date
+                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
               >
                 + Add New Task
               </button>
 
               <button
                 onClick={() => setIsProjectModalOpen(true)}
-                className="py-2 px-4 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-lg shadow-md transition duration-200"
+                disabled={project.completion_date}
+                className={`py-2 px-4 font-semibold rounded-lg shadow-md transition duration-200 ${
+                  project.completion_date
+                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                    : 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                }`}
               >
                 Edit Project
               </button>
+
+              {!project.completion_date && (
+                <button
+                  onClick={() => setIsCompletionModalOpen(true)}
+                  className="py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-md transition duration-200"
+                >
+                  Mark Complete
+                </button>
+              )}
 
               <button
                 onClick={handleDeleteProject}
@@ -129,6 +161,31 @@ const ProjectDetails = () => {
 
         <p className="text-gray-700 mb-6">{project.description}</p>
 
+        {/* Project Dates */}
+        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <h3 className="text-lg font-semibold mb-3 text-gray-800">Project Timeline</h3>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <p className="text-sm text-gray-600">Start Date</p>
+              <p className="font-medium text-gray-900">
+                {project.start_date ? new Date(project.start_date).toLocaleDateString() : 'Not set'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Due Date</p>
+              <p className="font-medium text-gray-900">
+                {project.due_date ? new Date(project.due_date).toLocaleDateString() : 'Not set'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Completion Date</p>
+              <p className="font-medium text-gray-900">
+                {project.completion_date ? new Date(project.completion_date).toLocaleDateString() : 'Not set'}
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Member Display and Update Button */}
         <div className="mb-8 p-4 border rounded-lg shadow-md bg-white">
           <div className="flex justify-between items-center mb-3">
@@ -136,7 +193,12 @@ const ProjectDetails = () => {
             {role === 'admin' && (
               <button
                 onClick={() => setIsMemberModalOpen(true)}
-                className="py-1 px-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition duration-200"
+                disabled={project.completion_date}
+                className={`py-1 px-3 text-sm font-semibold rounded-lg transition duration-200 ${
+                  project.completion_date
+                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                }`}
               >
                 Update Members
               </button>
@@ -198,6 +260,8 @@ const ProjectDetails = () => {
           isOpen={isTaskModalOpen}
           onClose={handleTaskModalClose}
           onTaskSaved={fetchProjectDetails}
+          projectStartDate={project.start_date}
+          projectDueDate={project.due_date}
         />
 
         <ProjectModal
@@ -214,6 +278,15 @@ const ProjectDetails = () => {
           isOpen={isMemberModalOpen}
           onClose={() => setIsMemberModalOpen(false)}
           onMembersUpdated={handleMembersUpdated}
+        />
+
+        <ProjectCompletionModal
+          projectId={id}
+          projectName={project.name}
+          tasks={sortedTasks}
+          isOpen={isCompletionModalOpen}
+          onClose={() => setIsCompletionModalOpen(false)}
+          onCompleted={handleProjectSaved}
         />
       </div>
     </div>

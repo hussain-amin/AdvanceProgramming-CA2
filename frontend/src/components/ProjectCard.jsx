@@ -26,10 +26,20 @@ const ProjectCard = ({ project }) => {
         <p className="text-gray-600 text-sm mb-4 line-clamp-3">
           {project.description || "No description provided."}
         </p>
-        <div className="text-xs text-gray-500 mb-4">
-          {project.deadline && (
+        <div className="text-xs text-gray-500 mb-4 space-y-1">
+          {project.start_date && (
             <p>
-              Deadline: <span className="font-medium text-gray-700">{new Date(project.deadline).toLocaleDateString()}</span>
+              Start: <span className="font-medium text-gray-700">{new Date(project.start_date).toLocaleDateString()}</span>
+            </p>
+          )}
+          {project.due_date && (
+            <p>
+              Due: <span className="font-medium text-gray-700">{new Date(project.due_date).toLocaleDateString()}</span>
+            </p>
+          )}
+          {project.completion_date && (
+            <p>
+              Completed: <span className="font-medium text-gray-700">{new Date(project.completion_date).toLocaleDateString()}</span>
             </p>
           )}
         </div>

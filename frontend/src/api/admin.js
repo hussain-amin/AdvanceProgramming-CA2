@@ -128,3 +128,11 @@ export const deleteMember = async (userId, token) => {
   });
   return res.json();
 };
+
+export const completeProject = async (projectId, token) => {
+  const res = await fetch(`${BASE_URL}/projects/${projectId}/complete`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.json();
+};

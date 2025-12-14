@@ -6,7 +6,8 @@ const ProjectForm = ({ projectToEdit, onProjectSaved }) => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    deadline: "",
+    start_date: "",
+    due_date: "",
     priority: "Medium",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -17,15 +18,17 @@ const ProjectForm = ({ projectToEdit, onProjectSaved }) => {
       setFormData({
         name: projectToEdit.title || "",
         description: projectToEdit.description || "",
-        // Format deadline to YYYY-MM-DD for input type="date"
-        deadline: projectToEdit.deadline ? new Date(projectToEdit.deadline).toISOString().split('T')[0] : "",
+        // Format dates to YYYY-MM-DD for input type="date"
+        start_date: projectToEdit.start_date ? new Date(projectToEdit.start_date).toISOString().split('T')[0] : "",
+        due_date: projectToEdit.due_date ? new Date(projectToEdit.due_date).toISOString().split('T')[0] : "",
         priority: projectToEdit.priority || "Medium",
       });
     } else {
       setFormData({
         name: "",
         description: "",
-        deadline: "",
+        start_date: "",
+        due_date: "",
         priority: "Medium",
       });
     }
@@ -56,7 +59,8 @@ const ProjectForm = ({ projectToEdit, onProjectSaved }) => {
           setFormData({
             name: "",
             description: "",
-            deadline: "",
+            start_date: "",
+            due_date: "",
             priority: "Medium",
           });
         }
@@ -102,13 +106,29 @@ const ProjectForm = ({ projectToEdit, onProjectSaved }) => {
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
         />
         <div className="grid grid-cols-2 gap-4">
-          <input
-            type="date"
-            name="deadline"
-            value={formData.deadline}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+            <input
+              type="date"
+              name="start_date"
+              value={formData.start_date}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+            <input
+              type="date"
+              name="due_date"
+              value={formData.due_date}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
           <select
             name="priority"
             value={formData.priority}

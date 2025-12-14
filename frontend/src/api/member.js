@@ -8,6 +8,13 @@ export const getMemberProjects = async (token ) => {
   return res.json();
 };
 
+export const getProjectDetails = async (projectId, token) => {
+  const res = await fetch(`${BASE_URL}/projects/${projectId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+};
+
 export const getProjectTasks = async (projectId, token) => {
   const res = await fetch(`${BASE_URL}/projects/${projectId}/tasks`, {
     headers: { Authorization: `Bearer ${token}` },

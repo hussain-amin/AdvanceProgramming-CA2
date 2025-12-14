@@ -19,7 +19,9 @@ def member_projects():
         "id": p.id,
         "name": p.name,
         "description": p.description,
-        "deadline": p.deadline,
+        "start_date": p.start_date.isoformat() if p.start_date else None,
+        "due_date": p.due_date.isoformat() if p.due_date else None,
+        "completion_date": p.completion_date.isoformat() if p.completion_date else None,
         "priority": p.priority
     } for p in user.projects]
     return jsonify(projects)
@@ -41,11 +43,62 @@ def project_tasks(project_id):
         "description": t.description,
         "status": t.status,
         "priority": t.priority,
+        "start_date": t.start_date.isoformat() if t.start_date else None,
         "due_date": t.due_date.isoformat() if t.due_date else None,
+        "completion_date": t.completion_date.isoformat() if t.completion_date else None,
         "assigned_to": t.assigned_to,
         "assignee_name": User.query.get(t.assigned_to).name if t.assigned_to else None
     } for t in project.tasks]
     return jsonify(tasks)
+
+
+@member.route('/projects/<int:project_id>', methods=['GET'])
+@jwt_required()
+def get_member_project_details(project_id):
+    """Get full project details (member can only see if assigned)"""
+    user_id = get_jwt_identity()
+    user = User.query.get(int(user_id))
+    project = Project.query.get_or_404(project_id)
+    
+    # Check if member is assigned to this project
+    if user not in project.members:
+        return jsonify({"msg": "Access denied"}), 403
+    
+    return jsonify({
+        "project": {
+            "id": project.id,
+            "name": project.name,
+            "description": project.description,
+            "start_date": project.start_date.isoformat() if project.start_date else None,
+            "due_date": project.due_date.isoformat() if project.due_date else None,
+            "completion_date": project.completion_date.isoformat() if project.completion_date else None,
+            "priority": project.priority,
+            "created_at": project.created_at.isoformat(),
+            "tasks": [{
+                "id": t.id,
+                "title": t.title,
+                "description": t.description,
+                "status": t.status,
+                "priority": t.priority,
+                "start_date": t.start_date.isoformat() if t.start_date else None,
+                "due_date": t.due_date.isoformat() if t.due_date else None,
+                "completion_date": t.completion_date.isoformat() if t.completion_date else None,
+                "assigned_to": t.assigned_to,
+                "assignee_name": User.query.get(t.assigned_to).name if t.assigned_to else None
+            } for t in project.tasks],
+            "members": [{
+                "id": m.id,
+                "name": m.name,
+                "email": m.email
+            } for m in project.members],
+            "activity_logs": [{
+                "id": log.id,
+                "action": log.action,
+                "user_name": User.query.get(log.user_id).name,
+                "created_at": log.created_at.isoformat()
+            } for log in ActivityLog.query.filter_by(user_id=project.id).all()]
+        }
+    })
 
 
 # ======================================
@@ -97,6 +150,11 @@ def update_task_status(task_id):
     
     data = request.json
     task.status = data.get('status', task.status)
+    
+    # Auto-record completion_date when task is marked as completed
+    if task.status == 'completed':
+        from datetime import datetime
+        task.completion_date = datetime.utcnow()
     
     # Log activity
     log = ActivityLog(

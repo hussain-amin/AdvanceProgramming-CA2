@@ -55,8 +55,12 @@ const TaskItem = ({ task, onTaskUpdated, onTaskEdit }) => {
           <h4 className="text-lg font-semibold">{task.title}</h4>
           <p className="text-sm text-gray-600">{task.description}</p>
           <p className={`text-xs ${getPriorityColor(task.priority)}`}>Priority: {task.priority}</p>
-          <p className="text-xs text-gray-500">Due: {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}</p>
-          {task.project_name && <p className="text-xs text-blue-500">Project: {task.project_name}</p>}
+          <div className="text-xs text-gray-500 space-y-1 mt-2">
+            {task.start_date && <p>Start: {new Date(task.start_date).toLocaleDateString()}</p>}
+            {task.due_date && <p>Due: {new Date(task.due_date).toLocaleDateString()}</p>}
+            {task.completion_date && <p>Completed: {new Date(task.completion_date).toLocaleDateString()}</p>}
+          </div>
+          {task.project_name && <p className="text-xs text-blue-500 mt-2">Project: {task.project_name}</p>}
           <p className="text-xs text-gray-500">Assigned to: {task.assignee_name || 'Unassigned'}</p>
         </div>
         <div className="flex flex-col items-end space-y-2">

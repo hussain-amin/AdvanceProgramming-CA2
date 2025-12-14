@@ -32,7 +32,9 @@ def get_projects():
         "id": p.id,
         "title": p.name,
         "description": p.description,
-        "deadline": p.deadline,
+        "start_date": p.start_date.isoformat() if p.start_date else None,
+        "due_date": p.due_date.isoformat() if p.due_date else None,
+        "completion_date": p.completion_date.isoformat() if p.completion_date else None,
         "priority": p.priority
     } for p in projects]})
 
@@ -46,7 +48,9 @@ def create_project():
     project = Project(
         name=data['name'],
         description=data.get('description'),
-        deadline=datetime.fromisoformat(data['deadline']) if data.get('deadline') else None,
+        start_date=datetime.fromisoformat(data['start_date']) if data.get('start_date') else None,
+        due_date=datetime.fromisoformat(data['due_date']) if data.get('due_date') else None,
+        completion_date=None,
         priority=data.get('priority', 'Medium')
     )
     db.session.add(project)
@@ -65,7 +69,9 @@ def get_project_details(project_id):
             "id": project.id,
             "name": project.name,
             "description": project.description,
-            "deadline": project.deadline.isoformat() if project.deadline else None,
+            "start_date": project.start_date.isoformat() if project.start_date else None,
+            "due_date": project.due_date.isoformat() if project.due_date else None,
+            "completion_date": project.completion_date.isoformat() if project.completion_date else None,
             "priority": project.priority,
             "created_at": project.created_at.isoformat(),
             "tasks": [{
@@ -74,7 +80,9 @@ def get_project_details(project_id):
                 "description": t.description,
                 "status": t.status,
                 "priority": t.priority,
+                "start_date": t.start_date.isoformat() if t.start_date else None,
                 "due_date": t.due_date.isoformat() if t.due_date else None,
+                "completion_date": t.completion_date.isoformat() if t.completion_date else None,
                 "assigned_to": t.assigned_to,
                 "assignee_name": User.query.get(t.assigned_to).name if t.assigned_to else None
             } for t in project.tasks],
@@ -102,7 +110,10 @@ def edit_project(project_id):
     data = request.json
     project.name = data.get('name', project.name)
     project.description = data.get('description', project.description)
-    project.deadline = datetime.fromisoformat(data['deadline']) if data.get('deadline') else project.deadline
+    project.start_date = datetime.fromisoformat(data['start_date']) if data.get('start_date') else project.start_date
+    project.due_date = datetime.fromisoformat(data['due_date']) if data.get('due_date') else project.due_date
+    if data.get('completion_date'):
+        project.completion_date = datetime.fromisoformat(data['completion_date'])
     project.priority = data.get('priority', project.priority)
     db.session.commit()
     return jsonify({"msg": "Project updated"})
@@ -112,11 +123,59 @@ def edit_project(project_id):
 @jwt_required()
 @admin_required
 def delete_project(project_id):
-    """Delete a project"""
+    """Delete a project and all associated tasks"""
     project = Project.query.get_or_404(project_id)
+    
+    # Delete all tasks associated with the project first
+    Task.query.filter_by(project_id=project_id).delete()
+    
+    # Delete all activity logs associated with the project
+    ActivityLog.query.filter_by(user_id=project_id).delete()
+    
+    # Delete the project
     db.session.delete(project)
     db.session.commit()
     return jsonify({"msg": "Project deleted"})
+
+
+@admin.route('/projects/<int:project_id>/complete', methods=['PUT'])
+@jwt_required()
+@admin_required
+def complete_project(project_id):
+    """Mark a project as complete and record completion date"""
+    project = Project.query.get_or_404(project_id)
+    
+    # Get all tasks to check their status
+    all_tasks = Task.query.filter_by(project_id=project_id).all()
+    pending_tasks = [t for t in all_tasks if t.status != 'completed']
+    
+    # Check if there are pending tasks
+    if pending_tasks:
+        return jsonify({
+            "msg": "Cannot mark project as complete. The following tasks are still pending:",
+            "pending_tasks": [{
+                "id": t.id,
+                "title": t.title,
+                "status": t.status
+            } for t in pending_tasks]
+        }), 400
+    
+    # Record completion date
+    project.completion_date = datetime.utcnow()
+    
+    # Log activity
+    user_id = get_jwt_identity()
+    log = ActivityLog(
+        action=f"Marked project '{project.name}' as complete",
+        user_id=int(user_id)
+    )
+    db.session.add(log)
+    db.session.commit()
+    
+    return jsonify({
+        "msg": "Project marked as complete",
+        "completion_date": project.completion_date.isoformat()
+    })
 
 
 @admin.route('/projects/<int:project_id>/members', methods=['PUT'])
@@ -241,12 +300,22 @@ def create_task(project_id):
     project = Project.query.get_or_404(project_id)
     data = request.json
     
+    start_date = datetime.fromisoformat(data['start_date']) if data.get('start_date') else None
+    due_date = datetime.fromisoformat(data['due_date']) if data.get('due_date') else None
+    
+    # Validate task dates are within project dates
+    if start_date and project.start_date and start_date < project.start_date:
+        return jsonify({"msg": "Task start date cannot be before project start date"}), 400
+    if due_date and project.due_date and due_date > project.due_date:
+        return jsonify({"msg": "Task due date cannot be after project due date"}), 400
+    
     task = Task(
         title=data['title'],
         description=data.get('description'),
         status=data.get('status', 'todo'),
         priority=data.get('priority', 'medium'),
-        due_date=datetime.fromisoformat(data['due_date']) if data.get('due_date') else None,
+        start_date=start_date,
+        due_date=due_date,
         project_id=project_id,
         assigned_to=data.get('assigned_to')
     )
@@ -272,12 +341,29 @@ def update_task(task_id):
     """Update a task"""
     task = Task.query.get_or_404(task_id)
     data = request.json
+    project = task.project
     
     task.title = data.get('title', task.title)
     task.description = data.get('description', task.description)
     task.status = data.get('status', task.status)
     task.priority = data.get('priority', task.priority)
-    task.due_date = datetime.fromisoformat(data['due_date']) if data.get('due_date') else task.due_date
+    
+    # Handle date updates with validation
+    if data.get('start_date'):
+        start_date = datetime.fromisoformat(data['start_date'])
+        if project.start_date and start_date < project.start_date:
+            return jsonify({"msg": "Task start date cannot be before project start date"}), 400
+        task.start_date = start_date
+    
+    if data.get('due_date'):
+        due_date = datetime.fromisoformat(data['due_date'])
+        if project.due_date and due_date > project.due_date:
+            return jsonify({"msg": "Task due date cannot be after project due date"}), 400
+        task.due_date = due_date
+    
+    if data.get('completion_date'):
+        task.completion_date = datetime.fromisoformat(data['completion_date'])
+    
     task.assigned_to = data.get('assigned_to', task.assigned_to)
     
     # Log activity
@@ -350,7 +436,9 @@ def get_all_tasks():
             "description": t.description,
             "status": t.status,
             "priority": t.priority,
+            "start_date": t.start_date.isoformat() if t.start_date else None,
             "due_date": t.due_date.isoformat() if t.due_date else None,
+            "completion_date": t.completion_date.isoformat() if t.completion_date else None,
             "assigned_to": t.assigned_to,
             "assignee_name": User.query.get(t.assigned_to).name if t.assigned_to else None,
             "project_id": t.project_id,

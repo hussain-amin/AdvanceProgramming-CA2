@@ -36,7 +36,9 @@ class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text, nullable=True)
-    deadline = db.Column(db.DateTime, nullable=True)
+    start_date = db.Column(db.DateTime, nullable=True)
+    due_date = db.Column(db.DateTime, nullable=True)  # Renamed from deadline
+    completion_date = db.Column(db.DateTime, nullable=True)
     priority = db.Column(db.String(20), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -52,7 +54,9 @@ class Task(db.Model):
     description = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), default='todo')  # todo, in_progress, completed
     priority = db.Column(db.String(20), default='medium')  # low, medium, high
+    start_date = db.Column(db.DateTime, nullable=True)
     due_date = db.Column(db.DateTime, nullable=True)
+    completion_date = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)

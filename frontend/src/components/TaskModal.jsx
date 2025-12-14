@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { createTask, updateTask } from "../api/admin";
 
-const TaskModal = ({ projectId, members, taskToEdit, isOpen, onClose, onTaskSaved }) => {
+const TaskModal = ({ projectId, members, taskToEdit, isOpen, onClose, onTaskSaved, projectStartDate, projectDueDate }) => {
   const token = localStorage.getItem("token");
   const [task, setTask] = useState({
     title: "",
     description: "",
     priority: "medium",
+    start_date: "",
     due_date: "",
     assigned_to: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Format dates for min/max attributes
+  const minDate = projectStartDate ? new Date(projectStartDate).toISOString().split('T')[0] : "";
+  const maxDate = projectDueDate ? new Date(projectDueDate).toISOString().split('T')[0] : "";
 
   useEffect(() => {
     if (taskToEdit) {
@@ -18,6 +23,7 @@ const TaskModal = ({ projectId, members, taskToEdit, isOpen, onClose, onTaskSave
         title: taskToEdit.title || "",
         description: taskToEdit.description || "",
         priority: taskToEdit.priority || "medium",
+        start_date: taskToEdit.start_date ? new Date(taskToEdit.start_date).toISOString().split('T')[0] : "",
         due_date: taskToEdit.due_date ? new Date(taskToEdit.due_date).toISOString().split('T')[0] : "",
         assigned_to: taskToEdit.assigned_to || "",
       });
@@ -26,6 +32,7 @@ const TaskModal = ({ projectId, members, taskToEdit, isOpen, onClose, onTaskSave
         title: "",
         description: "",
         priority: "medium",
+        start_date: "",
         due_date: "",
         assigned_to: "",
       });
@@ -39,7 +46,8 @@ const TaskModal = ({ projectId, members, taskToEdit, isOpen, onClose, onTaskSave
     const taskData = {
       ...task,
       assigned_to: task.assigned_to === "" ? null : parseInt(task.assigned_to),
-      // Ensure due_date is sent as a string if it exists
+      // Ensure dates are sent as strings if they exist
+      start_date: task.start_date || null,
       due_date: task.due_date || null,
     };
 
@@ -87,34 +95,59 @@ const TaskModal = ({ projectId, members, taskToEdit, isOpen, onClose, onTaskSave
             onChange={(e) => setTask({ ...task, description: e.target.value })}
           />
           <div className="grid grid-cols-2 gap-4">
-            <select
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-              value={task.priority}
-              onChange={(e) => setTask({ ...task, priority: e.target.value })}
-            >
-              <option value="low">Low Priority</option>
-              <option value="medium">Medium Priority</option>
-              <option value="high">High Priority</option>
-            </select>
-            <input
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-              type="date"
-              value={task.due_date}
-              onChange={(e) => setTask({ ...task, due_date: e.target.value })}
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+              <select
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                value={task.priority}
+                onChange={(e) => setTask({ ...task, priority: e.target.value })}
+              >
+                <option value="low">Low Priority</option>
+                <option value="medium">Medium Priority</option>
+                <option value="high">High Priority</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
+              <select
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                value={task.assigned_to}
+                onChange={(e) => setTask({ ...task, assigned_to: e.target.value })}
+              >
+                <option value="">Unassigned</option>
+                {members.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          <select
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-            value={task.assigned_to}
-            onChange={(e) => setTask({ ...task, assigned_to: e.target.value })}
-          >
-            <option value="">Unassigned</option>
-            {members.map((member) => (
-              <option key={member.id} value={member.id}>
-                {member.name}
-              </option>
-            ))}
-          </select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+              <input
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                type="date"
+                value={task.start_date}
+                onChange={(e) => setTask({ ...task, start_date: e.target.value })}
+                min={minDate}
+                max={maxDate}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+              <input
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                type="date"
+                value={task.due_date}
+                onChange={(e) => setTask({ ...task, due_date: e.target.value })}
+                min={minDate}
+                max={maxDate}
+              />
+            </div>
+          </div>
+
           <button
             type="submit"
             disabled={isSubmitting}

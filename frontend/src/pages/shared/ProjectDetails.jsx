@@ -155,160 +155,197 @@ const ProjectDetails = () => {
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
       <div className="flex-1 p-8">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-3xl font-bold">{project.name}</h1>
-          {role === 'admin' && (
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setIsTaskModalOpen(true)}
-                disabled={project.completion_date}
-                className={`py-2 px-4 font-semibold rounded-lg shadow-md transition duration-200 ${
-                  project.completion_date
-                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
-              >
-                + Add New Task
-              </button>
+        {/* TOP SECTION: Title, Timeline, Buttons */}
+        <div className="grid grid-cols-4 gap-6 mb-8">
+          {/* Project Info */}
+          <div className="col-span-2 p-4 bg-white rounded-lg shadow-md border border-gray-200 max-h-48 overflow-y-auto">
+            <h1 className="text-2xl font-bold mb-2">{project.name}</h1>
+            <p className="text-gray-600 text-sm whitespace-pre-wrap break-words">{project.description}</p>
+          </div>
 
+          {/* Project Timeline */}
+          <div className="col-span-1 p-3 bg-blue-50 rounded-lg border border-blue-200 h-48 overflow-hidden flex flex-col">
+            <h3 className="text-base font-semibold mb-2 text-gray-800">Project Timeline</h3>
+            <div className="relative pl-1 flex-1 flex flex-col justify-between py-1">
+              {/* Timeline Line */}
+              <div className="absolute left-[10px] top-2 bottom-2 w-1 bg-gradient-to-b from-blue-600 via-purple-500 to-pink-500 rounded-full z-0 opacity-80"></div>
+
+              {/* Start Date */}
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="flex-shrink-0 w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full border-2 border-blue-50 shadow-md flex items-center justify-center">
+                  <span className="text-white text-[10px] font-bold">▶</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Start Date</p>
+                  <p className="text-xs font-bold text-gray-800">{project.start_date ? new Date(project.start_date).toLocaleDateString() : 'Not set'}</p>
+                </div>
+              </div>
+
+              {/* Due Date */}
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="flex-shrink-0 w-6 h-6 bg-gradient-to-br from-orange-400 to-red-600 rounded-full border-2 border-blue-50 shadow-md flex items-center justify-center">
+                  <span className="text-white text-[10px]">📅</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Due Date</p>
+                  <p className="text-xs font-bold text-gray-800">{project.due_date ? new Date(project.due_date).toLocaleDateString() : 'Not set'}</p>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className="flex items-center gap-3 relative z-10">
+                <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 border-blue-50 shadow-md flex items-center justify-center ${project.completion_date ? 'bg-gradient-to-br from-green-400 to-emerald-600' : 'bg-gradient-to-br from-blue-400 to-indigo-600'}`}>
+                  <span className="text-white text-[10px] font-bold">{project.completion_date ? '✓' : '◐'}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Status</p>
+                  <p className={`text-xs font-bold ${project.completion_date ? 'text-green-600' : 'text-blue-600'}`}>
+                    {project.completion_date ? `Completed: ${new Date(project.completion_date).toLocaleDateString()}` : 'In Progress'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Admin Buttons */}
+          {role === 'admin' && (
+            <div className="col-span-1 p-4 bg-white rounded-lg shadow-md border border-gray-200 flex flex-col gap-2">
               <button
                 onClick={() => setIsProjectModalOpen(true)}
                 disabled={project.completion_date}
-                className={`py-2 px-4 font-semibold rounded-lg shadow-md transition duration-200 ${
+                className={`py-2 px-4 font-semibold rounded-lg shadow-sm transition duration-200 text-sm ${
                   project.completion_date
                     ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
                     : 'bg-yellow-500 hover:bg-yellow-600 text-white'
                 }`}
               >
-                Edit Project
+                ✏️ Edit Project
               </button>
 
               {!project.completion_date && (
                 <button
                   onClick={() => setIsCompletionModalOpen(true)}
-                  className="py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-md transition duration-200"
+                  className="py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-sm transition duration-200 text-sm"
                 >
-                  Mark Complete
+                  ✓ Mark Complete
                 </button>
               )}
 
               <button
                 onClick={handleDeleteProject}
-                className="py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-md transition duration-200"
+                className="py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-sm transition duration-200 text-sm"
               >
-                Delete Project
+                🗑️ Delete
               </button>
             </div>
           )}
         </div>
 
-        <p className="text-gray-700 mb-6">{project.description}</p>
+        {/* MIDDLE SECTION: Files and Members */}
+        <div className="grid grid-cols-2 gap-6 mb-8">
+          {/* Project Files */}
+          <div className="p-4 border rounded-lg shadow-md bg-white max-h-64 overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Project Files</h2>
+              {role === 'admin' && (
+                <button
+                  onClick={() => setIsFileUploadModalOpen(true)}
+                  className="py-1 px-3 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition duration-200"
+                >
+                  + Add Files
+                </button>
+              )}
+            </div>
+            <FileList files={projectFiles} onDelete={handleDeleteFile} canDelete={role === 'admin'} />
+          </div>
 
-        {/* Project Dates */}
-        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800">Project Timeline</h3>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <p className="text-sm text-gray-600">Start Date</p>
-              <p className="font-medium text-gray-900">
-                {project.start_date ? new Date(project.start_date).toLocaleDateString() : 'Not set'}
-              </p>
+          {/* Project Members */}
+          <div className="p-4 border rounded-lg shadow-md bg-white max-h-64 overflow-y-auto">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-xl font-semibold">Project Members</h2>
+              {role === 'admin' && (
+                <button
+                  onClick={() => setIsMemberModalOpen(true)}
+                  disabled={project.completion_date}
+                  className={`py-1 px-3 text-sm font-semibold rounded-lg transition duration-200 ${
+                    project.completion_date
+                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                      : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                  }`}
+                >
+                  Update Members
+                </button>
+              )}
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Due Date</p>
-              <p className="font-medium text-gray-900">
-                {project.due_date ? new Date(project.due_date).toLocaleDateString() : 'Not set'}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Completion Date</p>
-              <p className="font-medium text-gray-900">
-                {project.completion_date ? new Date(project.completion_date).toLocaleDateString() : 'Not set'}
-              </p>
-            </div>
+            <ul className="flex flex-wrap gap-2 mt-1">
+              {projectMembers.length > 0 ? (
+                projectMembers.map(m => (
+                  <li key={m.id} className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
+                    {m.name}
+                  </li>
+                ))
+              ) : (
+                <li className="text-gray-500 text-sm">No members assigned.</li>
+              )}
+            </ul>
           </div>
         </div>
 
-        {/* Member Display and Update Button */}
-        <div className="mb-8 p-4 border rounded-lg shadow-md bg-white">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="text-xl font-semibold">Project Members</h2>
-            {role === 'admin' && (
-              <button
-                onClick={() => setIsMemberModalOpen(true)}
-                disabled={project.completion_date}
-                className={`py-1 px-3 text-sm font-semibold rounded-lg transition duration-200 ${
-                  project.completion_date
-                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                }`}
-              >
-                Update Members
-              </button>
-            )}
-          </div>
-          <ul className="flex flex-wrap gap-2 mt-1">
-            {projectMembers.length > 0 ? (
-              projectMembers.map(m => (
-                <li key={m.id} className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
-                  {m.name}
-                </li>
-              ))
-            ) : (
-              <li className="text-gray-500 text-sm">No members assigned.</li>
-            )}
-          </ul>
-        </div>
-
-        {/* Project Files Section */}
-        <div className="mb-8 p-4 border rounded-lg shadow-md bg-white">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Project Files</h2>
-            {role === 'admin' && (
-              <button
-                onClick={() => setIsFileUploadModalOpen(true)}
-                className="py-1 px-3 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition duration-200"
-              >
-                + Add Files
-              </button>
-            )}
-          </div>
-          <FileList files={projectFiles} onDelete={handleDeleteFile} canDelete={role === 'admin'} />
-        </div>
-
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-semibold">Tasks ({project.tasks.length})</h2>
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600">Sort by:</span>
+        {/* BOTTOM SECTION: Tasks and Activity Logs */}
+        <div className="grid grid-cols-2 gap-6 mb-8">
+          {/* Tasks */}
+          <div className="p-4 border rounded-lg shadow-md bg-white max-h-96 overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Tasks ({project.tasks.length})</h2>
+              {role === 'admin' && (
+                <button
+                  onClick={() => setIsTaskModalOpen(true)}
+                  disabled={project.completion_date}
+                  className={`py-1 px-3 text-sm font-semibold rounded-lg transition duration-200 ${
+                    project.completion_date
+                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  + Add Task
+                </button>
+              )}
+            </div>
+            <div className="mb-3 flex items-center space-x-2">
+              <span className="text-xs text-gray-600">Sort:</span>
               <select
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value)}
-                className="p-1 border rounded text-sm"
+                className="p-1 border rounded text-xs"
               >
                 <option value="due_date">Due Date</option>
                 <option value="priority">Priority</option>
               </select>
             </div>
+            {sortedTasks.length > 0 ? (
+              <TaskList tasks={sortedTasks} onTaskUpdated={fetchProjectDetails} onTaskEdit={handleTaskEdit} />
+            ) : (
+              <p className="text-gray-500 text-sm">No tasks for this project.</p>
+            )}
           </div>
-          
-          {sortedTasks.length > 0 ? (
-            <TaskList tasks={sortedTasks} onTaskUpdated={fetchProjectDetails} onTaskEdit={handleTaskEdit} />
-          ) : (
-            <p className="text-gray-500">No tasks for this project.</p>
-          )}
-        </div>
 
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">Activity Logs</h2>
-          <ul className="space-y-2 p-4 border rounded-lg shadow-md bg-white">
-            {project.activity_logs.map(log => (
-              <li key={log.id} className="text-sm border-b pb-1 last:border-b-0">
-                <span className="font-medium">{log.user_name}</span> {log.action}
-                <span className="text-xs text-gray-400 ml-2">{new Date(log.created_at).toLocaleString()}</span>
-              </li>
-            ))}
-          </ul>
+          {/* Activity Logs */}
+          <div className="p-4 border rounded-lg shadow-md bg-white max-h-96 overflow-y-auto">
+            <h2 className="text-xl font-semibold mb-4">Activity Logs</h2>
+            <ul className="space-y-2">
+              {project.activity_logs && project.activity_logs.length > 0 ? (
+                project.activity_logs.map(log => (
+                  <li key={log.id} className="text-xs border-b pb-2 last:border-b-0">
+                    <span className="font-medium text-gray-800">{log.user_name}</span>
+                    <p className="text-gray-600 text-xs mt-1">{log.action}</p>
+                    <span className="text-gray-400 text-xs">{new Date(log.created_at).toLocaleString()}</span>
+                  </li>
+                ))
+              ) : (
+                <p className="text-gray-500 text-sm">No activities yet.</p>
+              )}
+            </ul>
+          </div>
         </div>
 
         {/* Modals */}

@@ -136,3 +136,23 @@ export const completeProject = async (projectId, token) => {
   });
   return res.json();
 };
+
+export const approveTaskCompletion = async (taskId, token) => {
+  const res = await fetch(`${BASE_URL}/tasks/${taskId}/approve`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.json();
+};
+
+export const rejectTaskCompletion = async (taskId, reason = '', token) => {
+  const res = await fetch(`${BASE_URL}/tasks/${taskId}/reject`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ reason })
+  });
+  return res.json();
+};

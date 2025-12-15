@@ -62,6 +62,10 @@ env/
 *.sqlite3
 postgres_data/
 
+# User uploads
+backend/uploads/
+uploads/
+
 # OS
 .DS_Store
 Thumbs.db

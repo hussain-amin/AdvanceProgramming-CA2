@@ -49,7 +49,8 @@ def project_tasks(project_id):
         "due_date": t.due_date.isoformat() if t.due_date else None,
         "completion_date": t.completion_date.isoformat() if t.completion_date else None,
         "assigned_to": t.assigned_to,
-        "assignee_name": User.query.get(t.assigned_to).name if t.assigned_to else None
+        "assignee_name": User.query.get(t.assigned_to).name if t.assigned_to else None,
+        "attachments_count": len(t.attachments)
     } for t in project.tasks]
     return jsonify(tasks)
 
@@ -86,7 +87,8 @@ def get_member_project_details(project_id):
                 "due_date": t.due_date.isoformat() if t.due_date else None,
                 "completion_date": t.completion_date.isoformat() if t.completion_date else None,
                 "assigned_to": t.assigned_to,
-                "assignee_name": User.query.get(t.assigned_to).name if t.assigned_to else None
+                "assignee_name": User.query.get(t.assigned_to).name if t.assigned_to else None,
+                "attachments_count": len(t.attachments)
             } for t in project.tasks],
             "members": [{
                 "id": m.id,
@@ -160,7 +162,8 @@ def get_my_tasks():
             "priority": t.priority,
             "due_date": t.due_date.isoformat() if t.due_date else None,
             "project_id": t.project_id,
-            "project_name": Project.query.get(t.project_id).name
+            "project_name": Project.query.get(t.project_id).name,
+            "attachments_count": len(t.attachments)
         } for t in tasks]
     })
 
@@ -175,16 +178,22 @@ def update_task_status(task_id):
         return jsonify({"msg": "Not authorized"}), 403
     
     data = request.json
-    task.status = data.get('status', task.status)
+    new_status = data.get('status', task.status)
     
-    # Auto-record completion_date when task is marked as completed
-    if task.status == 'completed':
-        from datetime import datetime
-        task.completion_date = datetime.utcnow()
+    # Members cannot directly complete a task - they submit for review
+    if new_status == 'completed':
+        new_status = 'pending_review'
     
-    # Log activity
+    task.status = new_status
+    
+    # Log activity with appropriate message
+    if new_status == 'pending_review':
+        action_msg = f"Submitted task '{task.title}' for review"
+    else:
+        action_msg = f"Updated task '{task.title}' status to '{task.status}'"
+    
     log = ActivityLog(
-        action=f"Updated task '{task.title}' status to '{task.status}'",
+        action=action_msg,
         user_id=int(user_id),
         project_id=task.project_id
     )

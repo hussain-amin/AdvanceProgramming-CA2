@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, send_file
-from ..models import User, Project, Task, ActivityLog, ProjectFile, db
+from ..models import User, Project, Task, ActivityLog, ProjectFile, Comment, db
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 from functools import wraps
@@ -86,7 +86,8 @@ def get_project_details(project_id):
                 "due_date": t.due_date.isoformat() if t.due_date else None,
                 "completion_date": t.completion_date.isoformat() if t.completion_date else None,
                 "assigned_to": t.assigned_to,
-                "assignee_name": User.query.get(t.assigned_to).name if t.assigned_to else None
+                "assignee_name": User.query.get(t.assigned_to).name if t.assigned_to else None,
+                "attachments_count": len(t.attachments)
             } for t in project.tasks],
             "members": [{
                 "id": m.id,
@@ -402,6 +403,75 @@ def delete_task(task_id):
     
     db.session.commit()
     return jsonify({"msg": "Task deleted"})
+
+
+@admin.route('/tasks/<int:task_id>/approve', methods=['PUT'])
+@jwt_required()
+@admin_required
+def approve_task_completion(task_id):
+    """Approve a task completion (only for tasks in pending_review status)"""
+    task = Task.query.get_or_404(task_id)
+    
+    if task.status != 'pending_review':
+        return jsonify({"msg": "Task is not pending review"}), 400
+    
+    task.status = 'completed'
+    task.completion_date = datetime.utcnow()
+    
+    # Log activity
+    user_id = get_jwt_identity()
+    log = ActivityLog(
+        action=f"Approved completion of task '{task.title}'",
+        user_id=int(user_id),
+        project_id=task.project_id
+    )
+    db.session.add(log)
+    
+    db.session.commit()
+    return jsonify({"msg": "Task completion approved"})
+
+
+@admin.route('/tasks/<int:task_id>/reject', methods=['PUT'])
+@jwt_required()
+@admin_required
+def reject_task_completion(task_id):
+    """Reject a task completion and send back to in_progress"""
+    task = Task.query.get_or_404(task_id)
+    
+    if task.status != 'pending_review':
+        return jsonify({"msg": "Task is not pending review"}), 400
+    
+    data = request.json or {}
+    rejection_reason = data.get('reason', '').strip()
+    
+    task.status = 'in_progress'
+    
+    user_id = get_jwt_identity()
+    
+    # Add rejection reason as a comment if provided
+    if rejection_reason:
+        comment = Comment(
+            content=f"⚠️ Task Rejected: {rejection_reason}",
+            task_id=task.id,
+            user_id=int(user_id)
+        )
+        db.session.add(comment)
+    
+    # Log activity with rejection reason if provided
+    if rejection_reason:
+        action_msg = f"Rejected completion of task '{task.title}'. Reason: {rejection_reason}"
+    else:
+        action_msg = f"Rejected completion of task '{task.title}' - sent back for revision"
+    
+    log = ActivityLog(
+        action=action_msg,
+        user_id=int(user_id),
+        project_id=task.project_id
+    )
+    db.session.add(log)
+    
+    db.session.commit()
+    return jsonify({"msg": "Task sent back for revision"})
 
 
 @admin.route('/tasks', methods=['GET'])

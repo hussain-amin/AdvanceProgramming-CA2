@@ -155,65 +155,21 @@ const ProjectDetails = () => {
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
       <div className="flex-1 p-8">
-        {/* TOP SECTION: Title, Timeline, Buttons */}
-        <div className="grid grid-cols-4 gap-6 mb-8">
+        {/* TOP SECTION: Title and Buttons */}
+        <div className="grid grid-cols-3 gap-6 mb-8">
           {/* Project Info */}
           <div className="col-span-2 p-4 bg-white rounded-lg shadow-md border border-gray-200 max-h-48 overflow-y-auto">
             <h1 className="text-2xl font-bold mb-2">{project.name}</h1>
             <p className="text-gray-600 text-sm whitespace-pre-wrap break-words">{project.description}</p>
           </div>
 
-          {/* Project Timeline */}
-          <div className="col-span-1 p-3 bg-blue-50 rounded-lg border border-blue-200 h-48 overflow-hidden flex flex-col">
-            <h3 className="text-base font-semibold mb-2 text-gray-800">Project Timeline</h3>
-            <div className="relative pl-1 flex-1 flex flex-col justify-between py-1">
-              {/* Timeline Line */}
-              <div className="absolute left-[10px] top-2 bottom-2 w-1 bg-gradient-to-b from-blue-600 via-purple-500 to-pink-500 rounded-full z-0 opacity-80"></div>
-
-              {/* Start Date */}
-              <div className="flex items-center gap-3 relative z-10">
-                <div className="flex-shrink-0 w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full border-2 border-blue-50 shadow-md flex items-center justify-center">
-                  <span className="text-white text-[10px] font-bold">▶</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Start Date</p>
-                  <p className="text-xs font-bold text-gray-800">{project.start_date ? new Date(project.start_date).toLocaleDateString() : 'Not set'}</p>
-                </div>
-              </div>
-
-              {/* Due Date */}
-              <div className="flex items-center gap-3 relative z-10">
-                <div className="flex-shrink-0 w-6 h-6 bg-gradient-to-br from-orange-400 to-red-600 rounded-full border-2 border-blue-50 shadow-md flex items-center justify-center">
-                  <span className="text-white text-[10px]">📅</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Due Date</p>
-                  <p className="text-xs font-bold text-gray-800">{project.due_date ? new Date(project.due_date).toLocaleDateString() : 'Not set'}</p>
-                </div>
-              </div>
-
-              {/* Status */}
-              <div className="flex items-center gap-3 relative z-10">
-                <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 border-blue-50 shadow-md flex items-center justify-center ${project.completion_date ? 'bg-gradient-to-br from-green-400 to-emerald-600' : 'bg-gradient-to-br from-blue-400 to-indigo-600'}`}>
-                  <span className="text-white text-[10px] font-bold">{project.completion_date ? '✓' : '◐'}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Status</p>
-                  <p className={`text-xs font-bold ${project.completion_date ? 'text-green-600' : 'text-blue-600'}`}>
-                    {project.completion_date ? `Completed: ${new Date(project.completion_date).toLocaleDateString()}` : 'In Progress'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Admin Buttons */}
           {role === 'admin' && (
-            <div className="col-span-1 p-4 bg-white rounded-lg shadow-md border border-gray-200 flex flex-col gap-2">
+            <div className="col-span-1 p-4 bg-white rounded-lg shadow-md border border-gray-200 flex flex-col gap-3">
               <button
                 onClick={() => setIsProjectModalOpen(true)}
                 disabled={project.completion_date}
-                className={`py-2 px-4 font-semibold rounded-lg shadow-sm transition duration-200 text-sm ${
+                className={`flex-1 py-2 px-4 font-semibold rounded-lg shadow-sm transition duration-200 text-sm ${
                   project.completion_date
                     ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
                     : 'bg-yellow-500 hover:bg-yellow-600 text-white'
@@ -225,7 +181,7 @@ const ProjectDetails = () => {
               {!project.completion_date && (
                 <button
                   onClick={() => setIsCompletionModalOpen(true)}
-                  className="py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-sm transition duration-200 text-sm"
+                  className="flex-1 py-2 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-sm transition duration-200 text-sm"
                 >
                   ✓ Mark Complete
                 </button>
@@ -233,7 +189,7 @@ const ProjectDetails = () => {
 
               <button
                 onClick={handleDeleteProject}
-                className="py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-sm transition duration-200 text-sm"
+                className="flex-1 py-2 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-sm transition duration-200 text-sm"
               >
                 🗑️ Delete
               </button>
@@ -241,10 +197,51 @@ const ProjectDetails = () => {
           )}
         </div>
 
-        {/* MIDDLE SECTION: Files and Members */}
-        <div className="grid grid-cols-2 gap-6 mb-8">
+        {/* MIDDLE SECTION: Timeline, Files, and Members */}
+        <div className="grid grid-cols-3 gap-6 mb-8">
+          {/* Project Timeline */}
+          <div className="col-span-1 p-4 bg-blue-50 rounded-lg border border-blue-200 overflow-hidden flex flex-col">
+            <h3 className="text-lg font-semibold mb-3 text-gray-800">Project Timeline</h3>
+            <div className="relative pl-4 flex-1 flex flex-col justify-center gap-4">
+              {/* Start Date */}
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="flex-shrink-0 w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-700 rounded-full border-2 border-blue-50 shadow-md flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">▶</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Start Date</p>
+                  <p className="text-sm font-bold text-gray-800">{project.start_date ? new Date(project.start_date).toLocaleDateString() : 'Not set'}</p>
+                </div>
+              </div>
+
+              {/* Due Date */}
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="flex-shrink-0 w-7 h-7 bg-gradient-to-br from-orange-400 to-red-600 rounded-full border-2 border-blue-50 shadow-md flex items-center justify-center">
+                  <span className="text-white text-xs">📅</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Due Date</p>
+                  <p className="text-sm font-bold text-gray-800">{project.due_date ? new Date(project.due_date).toLocaleDateString() : 'Not set'}</p>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className="flex items-center gap-4 relative z-10">
+                <div className={`flex-shrink-0 w-7 h-7 rounded-full border-2 border-blue-50 shadow-md flex items-center justify-center ${project.completion_date ? 'bg-gradient-to-br from-green-400 to-emerald-600' : 'bg-gradient-to-br from-blue-400 to-indigo-600'}`}>
+                  <span className="text-white text-xs font-bold">{project.completion_date ? '✓' : '◐'}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Status</p>
+                  <p className={`text-sm font-bold ${project.completion_date ? 'text-green-600' : 'text-blue-600'}`}>
+                    {project.completion_date ? `Completed: ${new Date(project.completion_date).toLocaleDateString()}` : 'In Progress'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Project Files */}
-          <div className="p-4 border rounded-lg shadow-md bg-white max-h-64 overflow-y-auto">
+          <div className="col-span-1 p-4 border rounded-lg shadow-md bg-white max-h-64 overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Project Files</h2>
               {role === 'admin' && (
@@ -260,7 +257,7 @@ const ProjectDetails = () => {
           </div>
 
           {/* Project Members */}
-          <div className="p-4 border rounded-lg shadow-md bg-white max-h-64 overflow-y-auto">
+          <div className="col-span-1 p-4 border rounded-lg shadow-md bg-white max-h-64 overflow-y-auto">
             <div className="flex justify-between items-center mb-3">
               <h2 className="text-xl font-semibold">Project Members</h2>
               {role === 'admin' && (
@@ -277,10 +274,10 @@ const ProjectDetails = () => {
                 </button>
               )}
             </div>
-            <ul className="flex flex-wrap gap-2 mt-1">
+            <ul className="flex flex-col gap-2 mt-2">
               {projectMembers.length > 0 ? (
                 projectMembers.map(m => (
-                  <li key={m.id} className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
+                  <li key={m.id} className="bg-blue-100 text-blue-800 text-sm font-medium px-4 py-2 rounded-lg">
                     {m.name}
                   </li>
                 ))
@@ -292,9 +289,9 @@ const ProjectDetails = () => {
         </div>
 
         {/* BOTTOM SECTION: Tasks and Activity Logs */}
-        <div className="grid grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-3 gap-6 mb-8">
           {/* Tasks */}
-          <div className="p-4 border rounded-lg shadow-md bg-white max-h-96 overflow-y-auto">
+          <div className="col-span-2 p-4 border rounded-lg shadow-md bg-white max-h-[600px] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Tasks ({project.tasks.length})</h2>
               {role === 'admin' && (
@@ -330,7 +327,7 @@ const ProjectDetails = () => {
           </div>
 
           {/* Activity Logs */}
-          <div className="p-4 border rounded-lg shadow-md bg-white max-h-96 overflow-y-auto">
+          <div className="col-span-1 p-4 border rounded-lg shadow-md bg-white max-h-[600px] overflow-y-auto">
             <h2 className="text-xl font-semibold mb-4">Activity Logs</h2>
             <ul className="space-y-2">
               {project.activity_logs && project.activity_logs.length > 0 ? (

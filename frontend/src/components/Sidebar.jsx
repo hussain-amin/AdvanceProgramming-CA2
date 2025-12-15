@@ -22,6 +22,7 @@ const Sidebar = () => {
           { name: "Reports", path: "/reports", icon: "📈" },
         ]
       : []),
+    { name: "Update Profile", path: "/profile", icon: "⚙️" },
   ];
 
   return (

@@ -42,10 +42,11 @@ class Project(db.Model):
     priority = db.Column(db.String(20), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    tasks = db.relationship('Task', backref='project', lazy=True)
+    tasks = db.relationship('Task', backref='project', lazy=True, cascade='all, delete-orphan')
     members = db.relationship(
         'User', secondary=project_members, back_populates='projects'
     )
+    files = db.relationship('ProjectFile', backref='project', lazy=True, cascade='all, delete-orphan')
 
 class Task(db.Model):
     __tablename__ = 'tasks'
@@ -81,8 +82,19 @@ class Attachment(db.Model):
     filename = db.Column(db.String(200), nullable=False)
     file_url = db.Column(db.String(300), nullable=False)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
     task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False)
+
+class ProjectFile(db.Model):
+    __tablename__ = 'project_files'
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(200), nullable=False)
+    file_url = db.Column(db.String(300), nullable=False)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
 
 class ActivityLog(db.Model):
     __tablename__ = 'activity_logs'
@@ -91,3 +103,4 @@ class ActivityLog(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=True)

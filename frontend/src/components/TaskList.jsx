@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getTaskComments, addComment, updateTaskStatus } from '../api/member';
 import { deleteTask } from '../api/admin'; // New import
+import TaskFileModal from './TaskFileModal';
 
 const TaskItem = ({ task, onTaskUpdated, onTaskEdit }) => {
   const token = localStorage.getItem("token");
@@ -8,6 +9,7 @@ const TaskItem = ({ task, onTaskUpdated, onTaskEdit }) => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [showComments, setShowComments] = useState(false);
+  const [isFileModalOpen, setIsFileModalOpen] = useState(false);
 
   const fetchComments = async () => {
     const res = await getTaskComments(task.id, token);
@@ -97,8 +99,21 @@ const TaskItem = ({ task, onTaskUpdated, onTaskEdit }) => {
           >
             {showComments ? 'Hide Comments' : `View Comments (${comments.length})`}
           </button>
+
+          <button
+            onClick={() => setIsFileModalOpen(true)}
+            className="text-green-500 text-sm hover:underline"
+          >
+            📎 Files
+          </button>
         </div>
       </div>
+
+      <TaskFileModal 
+        taskId={task.id} 
+        isOpen={isFileModalOpen} 
+        onClose={() => setIsFileModalOpen(false)} 
+      />
 
       {showComments && (
         <div className="mt-4 p-3 bg-gray-100 border rounded">

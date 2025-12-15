@@ -8,6 +8,7 @@ import Projects from "./pages/shared/Projects";
 import ProjectDetails from "./pages/shared/ProjectDetails";
 import Members from "./pages/admin/Members";
 import Reports from "./pages/admin/Reports";
+import ProfileUpdate from "./pages/ProfileUpdate";
 import Login from "./pages/Login";
 
 // Inner component that uses useLocation
@@ -21,6 +22,7 @@ function MainContent({ token, role, userName }) {
     if (path.startsWith("/projects/")) return "Project Details";
     if (path === "/members") return "Manage Members";
     if (path === "/reports") return "Reports";
+    if (path === "/profile") return "Update Profile";
     return "Dashboard";
   };
 
@@ -38,6 +40,7 @@ function MainContent({ token, role, userName }) {
               />
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/:id" element={<ProjectDetails />} />
+              <Route path="/profile" element={<ProfileUpdate />} />
               {role === "admin" && <Route path="/members" element={<Members />} />}
               {role === "admin" && <Route path="/reports" element={<Reports />} />}
               <Route path="/login" element={<Navigate to="/" />} />

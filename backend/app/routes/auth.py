@@ -61,3 +61,66 @@ def login():
 
     access_token = create_access_token(identity=str(user.id), expires_delta=timedelta(hours=8))
     return jsonify({"access_token": access_token, "role": user.role, "name": user.name, "user_id": user.id})
+
+
+@main.route('/profile', methods=['GET'])
+def get_profile():
+    """Get current user profile"""
+    from flask_jwt_extended import jwt_required, get_jwt_identity
+    
+    jwt_required()(lambda: None)()  # This is a workaround to enforce JWT requirement
+    user_id = get_jwt_identity()
+    user = User.query.get_or_404(int(user_id))
+    
+    return jsonify({
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role
+        }
+    })
+
+
+@main.route('/profile', methods=['PUT'])
+def update_profile():
+    """Update user profile (name, email, password)"""
+    from flask_jwt_extended import jwt_required, get_jwt_identity
+    
+    jwt_required()(lambda: None)()  # This is a workaround to enforce JWT requirement
+    user_id = get_jwt_identity()
+    user = User.query.get_or_404(int(user_id))
+    
+    data = request.json
+    
+    # If updating password, verify current password
+    if data.get('new_password'):
+        current_password = data.get('current_password')
+        if not current_password:
+            return jsonify({"msg": "Current password is required to change password"}), 400
+        if not user.check_password(current_password):
+            return jsonify({"msg": "Current password is incorrect"}), 401
+        user.set_password(data['new_password'])
+    
+    # Update name if provided
+    if data.get('name'):
+        user.name = data['name']
+    
+    # Update email if provided
+    if data.get('email'):
+        # Check if email already exists
+        existing_user = User.query.filter_by(email=data['email']).first()
+        if existing_user and existing_user.id != user.id:
+            return jsonify({"msg": "Email already in use"}), 400
+        user.email = data['email']
+    
+    db.session.commit()
+    return jsonify({
+        "msg": "Profile updated successfully",
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role
+        }
+    })

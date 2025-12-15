@@ -1,6 +1,8 @@
-from flask import Blueprint, request, jsonify
-from ..models import User, Project, Task, Comment, Attachment, ActivityLog, db
+from flask import Blueprint, request, jsonify, send_file
+from ..models import User, Project, Task, Comment, Attachment, ActivityLog, ProjectFile, db
 from flask_jwt_extended import jwt_required, get_jwt_identity
+import os
+from werkzeug.utils import secure_filename
 
 member = Blueprint('member', __name__, url_prefix='/member')
 
@@ -96,8 +98,32 @@ def get_member_project_details(project_id):
                 "action": log.action,
                 "user_name": User.query.get(log.user_id).name,
                 "created_at": log.created_at.isoformat()
-            } for log in ActivityLog.query.filter_by(user_id=project.id).all()]
+            } for log in ActivityLog.query.filter_by(project_id=project.id).order_by(ActivityLog.created_at.desc()).all()]
         }
+    })
+
+
+@member.route('/projects/<int:project_id>/files', methods=['GET'])
+@jwt_required()
+def get_member_project_files(project_id):
+    """Get all files for a project (member can only view if assigned)"""
+    user_id = get_jwt_identity()
+    user = User.query.get(int(user_id))
+    project = Project.query.get_or_404(project_id)
+    
+    # Check if member is assigned to this project
+    if user not in project.members:
+        return jsonify({"msg": "Access denied"}), 403
+    
+    files = ProjectFile.query.filter_by(project_id=project_id).all()
+    return jsonify({
+        "files": [{
+            "id": f.id,
+            "filename": f.filename,
+            "file_url": f.file_url,
+            "uploaded_at": f.uploaded_at.isoformat(),
+            "uploaded_by": User.query.get(f.uploaded_by).name
+        } for f in files]
     })
 
 
@@ -159,7 +185,8 @@ def update_task_status(task_id):
     # Log activity
     log = ActivityLog(
         action=f"Updated task '{task.title}' status to '{task.status}'",
-        user_id=int(user_id)
+        user_id=int(user_id),
+        project_id=task.project_id
     )
     db.session.add(log)
     
@@ -216,3 +243,141 @@ def add_attachment(task_id):
     db.session.add(attachment)
     db.session.commit()
     return jsonify({"msg": "Attachment added"})
+
+
+# ======================================
+# ========== FILE ROUTES ===============
+# ======================================
+
+# Ensure uploads directory exists
+UPLOADS_DIR = '/app/uploads/tasks'
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 'xls', 'xlsx', 'zip'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@member.route('/tasks/<int:task_id>/files', methods=['POST'])
+@jwt_required()
+def upload_task_file(task_id):
+    """Upload a file to a task (member can only upload to their assigned task)"""
+    task = Task.query.get(task_id)
+    if not task:
+        return jsonify({"msg": "Task not found"}), 404
+    
+    user_id = get_jwt_identity()
+    user = User.query.get(int(user_id))
+    
+    # Check if user is assigned to this task
+    if task.assigned_to != user.id:
+        return jsonify({"msg": "You are not assigned to this task"}), 403
+    
+    if 'file' not in request.files:
+        return jsonify({"msg": "No file provided"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"msg": "No file selected"}), 400
+    
+    if not allowed_file(file.filename):
+        return jsonify({"msg": "File type not allowed"}), 400
+    
+    try:
+        # Save file with secure filename
+        filename = secure_filename(file.filename)
+        # Add timestamp to make unique
+        import time
+        filename = f"{int(time.time())}_{filename}"
+        filepath = os.path.join(UPLOADS_DIR, filename)
+        file.save(filepath)
+        
+        # Create database record
+        attachment = Attachment(
+            filename=file.filename,
+            file_url=f"/uploads/tasks/{filename}",
+            uploaded_by=user.id,
+            task_id=task_id
+        )
+        db.session.add(attachment)
+        
+        # Log activity
+        log = ActivityLog(
+            action=f"Uploaded file '{file.filename}' to task '{task.title}'",
+            user_id=user.id,
+            project_id=task.project_id
+        )
+        db.session.add(log)
+        db.session.commit()
+        
+        return jsonify({
+            "msg": "File uploaded successfully",
+            "file": {
+                "id": attachment.id,
+                "filename": attachment.filename,
+                "file_url": attachment.file_url,
+                "uploaded_at": attachment.uploaded_at.isoformat(),
+                "uploaded_by": user.name
+            }
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"msg": f"Error uploading file: {str(e)}"}), 500
+
+@member.route('/tasks/<int:task_id>/files', methods=['GET'])
+@jwt_required()
+def get_task_files(task_id):
+    """Get all files for a task (member can view if project member, admin can always view)"""
+    task = Task.query.get(task_id)
+    if not task:
+        return jsonify({"msg": "Task not found"}), 404
+    
+    user_id = get_jwt_identity()
+    user = User.query.get(int(user_id))
+    
+    # Check if user is a member of the project or is admin
+    if user.role != 'admin' and user not in task.project.members:
+        return jsonify({"msg": "Access denied"}), 403
+    
+    files = Attachment.query.filter_by(task_id=task_id).all()
+    return jsonify({
+        "files": [{
+            "id": f.id,
+            "filename": f.filename,
+            "file_url": f.file_url,
+            "uploaded_at": f.uploaded_at.isoformat(),
+            "uploaded_by": User.query.get(f.uploaded_by).name if f.uploaded_by else "Unknown"
+        } for f in files]
+    })
+
+@member.route('/tasks/<int:task_id>/files/<int:file_id>', methods=['DELETE'])
+@jwt_required()
+def delete_task_file(task_id, file_id):
+    """Delete a file from a task (only uploader or admin can delete)"""
+    task = Task.query.get(task_id)
+    if not task:
+        return jsonify({"msg": "Task not found"}), 404
+    
+    attachment = Attachment.query.filter_by(id=file_id, task_id=task_id).first()
+    if not attachment:
+        return jsonify({"msg": "File not found"}), 404
+    
+    user_id = get_jwt_identity()
+    user = User.query.get(int(user_id))
+    
+    # Check if user is the uploader or admin
+    if attachment.uploaded_by != user.id and user.role != 'admin':
+        return jsonify({"msg": "You don't have permission to delete this file"}), 403
+    
+    try:
+        # Delete file from filesystem
+        filepath = os.path.join(UPLOADS_DIR, attachment.file_url.split('/')[-1])
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        
+        # Delete database record
+        db.session.delete(attachment)
+        db.session.commit()
+        return jsonify({"msg": "File deleted successfully"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"msg": f"Error deleting file: {str(e)}"}), 500

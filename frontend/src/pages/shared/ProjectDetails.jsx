@@ -2,12 +2,15 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getProjectById, getMembers, deleteProject } from "../../api/admin";
 import { getProjectDetails as getMemberProjectDetails } from "../../api/member";
+import { uploadProjectFile, getProjectFiles, deleteProjectFile, getMemberProjectFiles } from "../../api/files";
 import Sidebar from "../../components/Sidebar";
 import TaskList from "../../components/TaskList";
 import TaskModal from "../../components/TaskModal";
 import ProjectModal from "../../components/ProjectModal";
 import MemberAssignmentModal from "../../components/MemberAssignmentModal";
 import ProjectCompletionModal from "../../components/ProjectCompletionModal";
+import FileUpload from "../../components/FileUpload";
+import FileList from "../../components/FileList";
 
 const ProjectDetails = () => {
   const token = localStorage.getItem("token");
@@ -22,6 +25,9 @@ const ProjectDetails = () => {
   const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState(null); // New state for editing
   const [sortKey, setSortKey] = useState('due_date'); // New state for sorting
+  const [projectFiles, setProjectFiles] = useState([]);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [isFileUploadModalOpen, setIsFileUploadModalOpen] = useState(false);
 
   const fetchProjectDetails = async () => {
     try {
@@ -43,11 +49,26 @@ const ProjectDetails = () => {
     setAllMembers(res.members);
   };
 
+  const fetchProjectFiles = async () => {
+    try {
+      let files;
+      if (role === 'admin') {
+        files = await getProjectFiles(id, token);
+      } else {
+        files = await getMemberProjectFiles(id, token);
+      }
+      setProjectFiles(files);
+    } catch (error) {
+      console.error("Error fetching project files:", error);
+    }
+  };
+
   useEffect(() => {
     fetchProjectDetails();
     if (role === 'admin') {
       fetchAllMembers();
     }
+    fetchProjectFiles();
   }, [id, role]);
 
   const handleDeleteProject = async () => {
@@ -73,6 +94,28 @@ const ProjectDetails = () => {
   const handleTaskModalClose = () => {
     setIsTaskModalOpen(false);
     setTaskToEdit(null);
+  };
+
+  const handleFileUpload = async (file) => {
+    try {
+      setIsUploadingFile(true);
+      await uploadProjectFile(id, file, token);
+      await fetchProjectFiles();
+      setIsFileUploadModalOpen(false); // Close modal after successful upload
+    } catch (error) {
+      alert("Error uploading file: " + error);
+    } finally {
+      setIsUploadingFile(false);
+    }
+  };
+
+  const handleDeleteFile = async (fileId) => {
+    try {
+      await deleteProjectFile(id, fileId, token);
+      await fetchProjectFiles();
+    } catch (error) {
+      alert("Error deleting file: " + error);
+    }
   };
 
   // Sorting logic
@@ -217,6 +260,22 @@ const ProjectDetails = () => {
           </ul>
         </div>
 
+        {/* Project Files Section */}
+        <div className="mb-8 p-4 border rounded-lg shadow-md bg-white">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Project Files</h2>
+            {role === 'admin' && (
+              <button
+                onClick={() => setIsFileUploadModalOpen(true)}
+                className="py-1 px-3 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition duration-200"
+              >
+                + Add Files
+              </button>
+            )}
+          </div>
+          <FileList files={projectFiles} onDelete={handleDeleteFile} canDelete={role === 'admin'} />
+        </div>
+
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-semibold">Tasks ({project.tasks.length})</h2>
@@ -288,6 +347,26 @@ const ProjectDetails = () => {
           onClose={() => setIsCompletionModalOpen(false)}
           onCompleted={handleProjectSaved}
         />
+
+        {/* File Upload Modal */}
+        {isFileUploadModalOpen && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center">
+            <div className="relative bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
+              <div className="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 className="text-2xl font-semibold text-gray-900">Upload Files</h3>
+                <button 
+                  onClick={() => setIsFileUploadModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+              <FileUpload onFileUpload={handleFileUpload} uploading={isUploadingFile} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

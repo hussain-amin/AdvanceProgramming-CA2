@@ -1,8 +1,10 @@
-from flask import Blueprint, request, jsonify
-from ..models import User, Project, Task, ActivityLog, db
+from flask import Blueprint, request, jsonify, send_file
+from ..models import User, Project, Task, ActivityLog, ProjectFile, db
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 from functools import wraps
+import os
+from werkzeug.utils import secure_filename
 
 admin = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -96,7 +98,7 @@ def get_project_details(project_id):
                 "action": log.action,
                 "user_name": User.query.get(log.user_id).name,
                 "created_at": log.created_at.isoformat()
-            } for log in ActivityLog.query.filter_by(user_id=project.id).all()]
+            } for log in ActivityLog.query.filter_by(project_id=project.id).order_by(ActivityLog.created_at.desc()).all()]
         }
     })
 
@@ -167,7 +169,8 @@ def complete_project(project_id):
     user_id = get_jwt_identity()
     log = ActivityLog(
         action=f"Marked project '{project.name}' as complete",
-        user_id=int(user_id)
+        user_id=int(user_id),
+        project_id=project_id
     )
     db.session.add(log)
     db.session.commit()
@@ -326,7 +329,8 @@ def create_task(project_id):
     user_id = get_jwt_identity()
     log = ActivityLog(
         action=f"Created task '{task.title}'",
-        user_id=int(user_id)
+        user_id=user_id,
+        project_id=project_id
     )
     db.session.add(log)
     
@@ -491,3 +495,126 @@ def get_report_stats():
             {"name": "High", "value": priority_data.get('high', 0)}
         ]
     })
+
+
+# ======================================
+# ========== FILE ROUTES ===============
+# ======================================
+
+# Ensure uploads directory exists
+UPLOADS_DIR = '/app/uploads/projects'
+os.makedirs(UPLOADS_DIR, exist_ok=True)
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 'xls', 'xlsx', 'zip'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@admin.route('/projects/<int:project_id>/files', methods=['POST'])
+@jwt_required()
+@admin_required
+def upload_project_file(project_id):
+    """Upload a file to a project"""
+    project = Project.query.get(project_id)
+    if not project:
+        return jsonify({"msg": "Project not found"}), 404
+    
+    if 'file' not in request.files:
+        return jsonify({"msg": "No file provided"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"msg": "No file selected"}), 400
+    
+    if not allowed_file(file.filename):
+        return jsonify({"msg": "File type not allowed"}), 400
+    
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        
+        # Save file with secure filename
+        filename = secure_filename(file.filename)
+        # Add timestamp to make unique
+        import time
+        filename = f"{int(time.time())}_{filename}"
+        filepath = os.path.join(UPLOADS_DIR, filename)
+        file.save(filepath)
+        
+        # Create database record
+        project_file = ProjectFile(
+            filename=file.filename,
+            file_url=f"/uploads/projects/{filename}",
+            uploaded_by=user.id,
+            project_id=project_id
+        )
+        db.session.add(project_file)
+        
+        # Log activity
+        log = ActivityLog(
+            action=f"Uploaded file '{file.filename}' to project",
+            user_id=user.id,
+            project_id=project_id
+        )
+        db.session.add(log)
+        db.session.commit()
+        
+        return jsonify({
+            "msg": "File uploaded successfully",
+            "file": {
+                "id": project_file.id,
+                "filename": project_file.filename,
+                "file_url": project_file.file_url,
+                "uploaded_at": project_file.uploaded_at.isoformat(),
+                "uploaded_by": user.name
+            }
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"msg": f"Error uploading file: {str(e)}"}), 500
+
+@admin.route('/projects/<int:project_id>/files', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_project_files(project_id):
+    """Get all files for a project"""
+    project = Project.query.get(project_id)
+    if not project:
+        return jsonify({"msg": "Project not found"}), 404
+    
+    files = ProjectFile.query.filter_by(project_id=project_id).all()
+    return jsonify({
+        "files": [{
+            "id": f.id,
+            "filename": f.filename,
+            "file_url": f.file_url,
+            "uploaded_at": f.uploaded_at.isoformat(),
+            "uploaded_by": User.query.get(f.uploaded_by).name
+        } for f in files]
+    })
+
+@admin.route('/projects/<int:project_id>/files/<int:file_id>', methods=['DELETE'])
+@jwt_required()
+@admin_required
+def delete_project_file(project_id, file_id):
+    """Delete a file from a project"""
+    project = Project.query.get(project_id)
+    if not project:
+        return jsonify({"msg": "Project not found"}), 404
+    
+    project_file = ProjectFile.query.filter_by(id=file_id, project_id=project_id).first()
+    if not project_file:
+        return jsonify({"msg": "File not found"}), 404
+    
+    try:
+        # Delete file from filesystem
+        filepath = os.path.join(UPLOADS_DIR, project_file.file_url.split('/')[-1])
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        
+        # Delete database record
+        db.session.delete(project_file)
+        db.session.commit()
+        return jsonify({"msg": "File deleted successfully"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"msg": f"Error deleting file: {str(e)}"}), 500

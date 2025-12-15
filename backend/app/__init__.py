@@ -12,7 +12,7 @@ migrate = Migrate()
 jwt = JWTManager()
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder='/app/uploads', static_url_path='/uploads')
     CORS(app)
 
     app.config['JWT_SECRET_KEY'] = os.getenv("JWT_SECRET_KEY", "supersecretjwt")
@@ -32,5 +32,9 @@ def create_app():
     app.register_blueprint(admin)
     app.register_blueprint(member)
     app.register_blueprint(shared)
+    
+    # Ensure upload directories exist
+    os.makedirs('/app/uploads/projects', exist_ok=True)
+    os.makedirs('/app/uploads/tasks', exist_ok=True)
 
     return app

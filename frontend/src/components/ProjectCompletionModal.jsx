@@ -65,7 +65,7 @@ const ProjectCompletionModal = ({ projectId, projectName, tasks, isOpen, onClose
             {completedTasks.length > 0 ? (
               <ul className="space-y-1 ml-4">
                 {completedTasks.map(task => (
-                  <li key={task.id} className="text-sm text-gray-700">
+                  <li key={`${task.project_id}-${task.task_number}`} className="text-sm text-gray-700">
                     • {task.title}
                   </li>
                 ))}
@@ -83,7 +83,7 @@ const ProjectCompletionModal = ({ projectId, projectName, tasks, isOpen, onClose
               </h5>
               <ul className="space-y-1 ml-4">
                 {pendingTasks.map(task => (
-                  <li key={task.id} className="text-sm text-gray-700">
+                  <li key={`${task.project_id}-${task.task_number}`} className="text-sm text-gray-700">
                     • {task.title} - <span className="capitalize text-gray-500">{task.status}</span>
                   </li>
                 ))}

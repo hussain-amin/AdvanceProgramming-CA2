@@ -1,4 +1,5 @@
 import React from "react";
+import NotificationPanel from "./NotificationPanel";
 
 const Navbar = ({ userName, title }) => {
   const role = localStorage.getItem("role");
@@ -8,9 +9,10 @@ const Navbar = ({ userName, title }) => {
       <h1 className="text-2xl font-semibold text-gray-800">
         {title || (role === "admin" ? "Admin Dashboard" : "Member Dashboard")}
       </h1>
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-4">
+        <NotificationPanel />
         <span className="text-gray-600">
-          Welcome to, <span className="font-medium text-blue-600">{userName}</span>
+          Welcome, <span className="font-medium text-blue-600">{userName}</span>
         </span>
         <span className="px-3 py-1 text-xs font-semibold text-white bg-green-500 rounded-full uppercase">
           {role}

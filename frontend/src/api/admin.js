@@ -84,8 +84,8 @@ export const createTask = async (projectId, task, token) => {
   return res.json();
 };
 
-export const updateTask = async (taskId, task, token) => {
-  const res = await fetch(`${API_URL}/admin/tasks/${taskId}`, {
+export const updateTask = async (projectId, taskNumber, task, token) => {
+  const res = await fetch(`${API_URL}/admin/projects/${projectId}/tasks/${taskNumber}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify(task)
@@ -93,8 +93,8 @@ export const updateTask = async (taskId, task, token) => {
   return res.json();
 };
 
-export const deleteTask = async (taskId, token) => {
-  const res = await fetch(`${API_URL}/admin/tasks/${taskId}`, {
+export const deleteTask = async (projectId, taskNumber, token) => {
+  const res = await fetch(`${API_URL}/admin/projects/${projectId}/tasks/${taskNumber}`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}` }
   });
@@ -137,22 +137,34 @@ export const completeProject = async (projectId, token) => {
   return res.json();
 };
 
-export const approveTaskCompletion = async (taskId, token) => {
-  const res = await fetch(`${BASE_URL}/tasks/${taskId}/approve`, {
+export const approveTaskCompletion = async (projectId, taskNumber, token) => {
+  const res = await fetch(`${BASE_URL}/projects/${projectId}/tasks/${taskNumber}/approve`, {
     method: "PUT",
     headers: { Authorization: `Bearer ${token}` }
   });
   return res.json();
 };
 
-export const rejectTaskCompletion = async (taskId, reason = '', token) => {
-  const res = await fetch(`${BASE_URL}/tasks/${taskId}/reject`, {
+export const rejectTaskCompletion = async (projectId, taskNumber, reason = '', token) => {
+  const res = await fetch(`${BASE_URL}/projects/${projectId}/tasks/${taskNumber}/reject`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`
     },
     body: JSON.stringify({ reason })
+  });
+  return res.json();
+};
+
+export const addAdminComment = async (projectId, taskNumber, content, token) => {
+  const res = await fetch(`${BASE_URL}/projects/${projectId}/tasks/${taskNumber}/comment`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ content })
   });
   return res.json();
 };

@@ -3,7 +3,7 @@ import { getTaskFiles, uploadTaskFile, deleteTaskFile } from "../api/files";
 import FileUpload from "./FileUpload";
 import FileList from "./FileList";
 
-const TaskFileModal = ({ taskId, taskTitle, isOpen, onClose, isAssignedUser, onFilesChange }) => {
+const TaskFileModal = ({ projectId, taskNumber, taskTitle, isOpen, onClose, isAssignedUser, onFilesChange }) => {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
   const [taskFiles, setTaskFiles] = useState([]);
@@ -13,7 +13,7 @@ const TaskFileModal = ({ taskId, taskTitle, isOpen, onClose, isAssignedUser, onF
   const fetchTaskFiles = async () => {
     try {
       setIsLoading(true);
-      const files = await getTaskFiles(taskId, token);
+      const files = await getTaskFiles(projectId, taskNumber, token);
       setTaskFiles(files);
       return files.length;
     } catch (error) {
@@ -28,12 +28,12 @@ const TaskFileModal = ({ taskId, taskTitle, isOpen, onClose, isAssignedUser, onF
     if (isOpen) {
       fetchTaskFiles();
     }
-  }, [isOpen, taskId]);
+  }, [isOpen, projectId, taskNumber]);
 
   const handleFileUpload = async (file) => {
     try {
       setIsUploadingFile(true);
-      await uploadTaskFile(taskId, file, token);
+      await uploadTaskFile(projectId, taskNumber, file, token);
       const count = await fetchTaskFiles();
       // Notify parent of file count change
       if (onFilesChange) onFilesChange(count);
@@ -46,7 +46,7 @@ const TaskFileModal = ({ taskId, taskTitle, isOpen, onClose, isAssignedUser, onF
 
   const handleDeleteFile = async (fileId) => {
     try {
-      await deleteTaskFile(taskId, fileId, token);
+      await deleteTaskFile(projectId, taskNumber, fileId, token);
       const count = await fetchTaskFiles();
       // Notify parent of file count change
       if (onFilesChange) onFilesChange(count);

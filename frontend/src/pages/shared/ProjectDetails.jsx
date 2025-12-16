@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { getProjectById, getMembers, deleteProject } from "../../api/admin";
 import { getProjectDetails as getMemberProjectDetails } from "../../api/member";
 import { uploadProjectFile, getProjectFiles, deleteProjectFile, getMemberProjectFiles } from "../../api/files";
@@ -16,6 +16,7 @@ const ProjectDetails = () => {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [project, setProject] = useState(null);
   const [allMembers, setAllMembers] = useState([]);
@@ -28,6 +29,7 @@ const ProjectDetails = () => {
   const [projectFiles, setProjectFiles] = useState([]);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [isFileUploadModalOpen, setIsFileUploadModalOpen] = useState(false);
+  const [highlightedTask, setHighlightedTask] = useState(null);
 
   const fetchProjectDetails = async () => {
     try {
@@ -70,6 +72,29 @@ const ProjectDetails = () => {
     }
     fetchProjectFiles();
   }, [id, role]);
+
+  // Handle scroll to task from notification click
+  useEffect(() => {
+    const taskNumber = searchParams.get('task');
+    if (taskNumber && project) {
+      setHighlightedTask(parseInt(taskNumber));
+      
+      // Wait for DOM to render, then scroll to task
+      setTimeout(() => {
+        const taskElement = document.getElementById(`task-${taskNumber}`);
+        if (taskElement) {
+          taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        // Clear highlight after 3 seconds
+        setTimeout(() => {
+          setHighlightedTask(null);
+          // Clear the URL param
+          setSearchParams({});
+        }, 3000);
+      }, 100);
+    }
+  }, [project, searchParams]);
 
   const handleDeleteProject = async () => {
     if (window.confirm(`Are you sure you want to delete project: ${project.name}?`)) {
@@ -320,7 +345,7 @@ const ProjectDetails = () => {
               </select>
             </div>
             {sortedTasks.length > 0 ? (
-              <TaskList tasks={sortedTasks} onTaskUpdated={fetchProjectDetails} onTaskEdit={handleTaskEdit} />
+              <TaskList tasks={sortedTasks} onTaskUpdated={fetchProjectDetails} onTaskEdit={handleTaskEdit} highlightedTask={highlightedTask} />
             ) : (
               <p className="text-gray-500 text-sm">No tasks for this project.</p>
             )}

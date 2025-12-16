@@ -18,7 +18,7 @@ class User(db.Model):
     role = db.Column(db.String(20), nullable=False)  # 'admin' or 'member'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    tasks = db.relationship('Task', backref='assignee', lazy=True)
+    tasks = db.relationship('Task', backref='assignee', lazy=True, foreign_keys='Task.assigned_to')
     comments = db.relationship('Comment', backref='author', lazy=True)
     activity_logs = db.relationship('ActivityLog', backref='user', lazy=True)
     projects = db.relationship(
@@ -50,21 +50,23 @@ class Project(db.Model):
 
 class Task(db.Model):
     __tablename__ = 'tasks'
-    id = db.Column(db.Integer, primary_key=True)
+    # Composite primary key: project_id + task_number
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), primary_key=True, nullable=False)
+    task_number = db.Column(db.Integer, primary_key=True, nullable=False)
+    
     title = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text, nullable=True)
-    status = db.Column(db.String(20), default='todo')  # todo, in_progress, completed
+    status = db.Column(db.String(20), default='todo')  # todo, in_progress, pending_review, completed
     priority = db.Column(db.String(20), default='medium')  # low, medium, high
     start_date = db.Column(db.DateTime, nullable=True)
     due_date = db.Column(db.DateTime, nullable=True)
     completion_date = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
     assigned_to = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
-    comments = db.relationship('Comment', backref='task', lazy=True)
-    attachments = db.relationship('Attachment', backref='task', lazy=True)
+    comments = db.relationship('Comment', backref='task', lazy=True, cascade='all, delete-orphan')
+    attachments = db.relationship('Attachment', backref='task', lazy=True, cascade='all, delete-orphan')
 
 
 class Comment(db.Model):
@@ -73,8 +75,18 @@ class Comment(db.Model):
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False)
+    # Composite foreign key to Task
+    task_project_id = db.Column(db.Integer, nullable=False)
+    task_number = db.Column(db.Integer, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    __table_args__ = (
+        db.ForeignKeyConstraint(
+            ['task_project_id', 'task_number'],
+            ['tasks.project_id', 'tasks.task_number'],
+            ondelete='CASCADE'
+        ),
+    )
 
 class Attachment(db.Model):
     __tablename__ = 'attachments'
@@ -84,7 +96,17 @@ class Attachment(db.Model):
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
     uploaded_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
-    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False)
+    # Composite foreign key to Task
+    task_project_id = db.Column(db.Integer, nullable=False)
+    task_number = db.Column(db.Integer, nullable=False)
+    
+    __table_args__ = (
+        db.ForeignKeyConstraint(
+            ['task_project_id', 'task_number'],
+            ['tasks.project_id', 'tasks.task_number'],
+            ondelete='CASCADE'
+        ),
+    )
 
 class ProjectFile(db.Model):
     __tablename__ = 'project_files'
@@ -104,3 +126,25 @@ class ActivityLog(db.Model):
 
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=True)
+
+
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    id = db.Column(db.Integer, primary_key=True)
+    message = db.Column(db.String(500), nullable=False)
+    type = db.Column(db.String(50), nullable=False)  # task_status, comment, file, assignment, review
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Who receives the notification
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    # Reference to related entities (optional)
+    task_project_id = db.Column(db.Integer, nullable=True)
+    task_number = db.Column(db.Integer, nullable=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=True)
+    
+    # Who triggered the notification
+    triggered_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    
+    user = db.relationship('User', foreign_keys=[user_id], backref='notifications')
+    triggerer = db.relationship('User', foreign_keys=[triggered_by])

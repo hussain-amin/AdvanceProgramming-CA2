@@ -33,6 +33,9 @@ dist-ssr
 __pycache__
 *.py[cod]
 *$py.class
+
+# Dev database route (do not commit)
+backend/app/routes/db.py
 *.so
 .Python
 build/

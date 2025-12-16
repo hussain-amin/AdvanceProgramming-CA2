@@ -5,6 +5,7 @@ from datetime import datetime
 from functools import wraps
 import os
 from werkzeug.utils import secure_filename
+from .shared import create_notification, notify_project_members
 
 admin = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -77,7 +78,8 @@ def get_project_details(project_id):
             "priority": project.priority,
             "created_at": project.created_at.isoformat(),
             "tasks": [{
-                "id": t.id,
+                "project_id": t.project_id,
+                "task_number": t.task_number,
                 "title": t.title,
                 "description": t.description,
                 "status": t.status,
@@ -157,7 +159,8 @@ def complete_project(project_id):
         return jsonify({
             "msg": "Cannot mark project as complete. The following tasks are still pending:",
             "pending_tasks": [{
-                "id": t.id,
+                "project_id": t.project_id,
+                "task_number": t.task_number,
                 "title": t.title,
                 "status": t.status
             } for t in pending_tasks]
@@ -189,9 +192,17 @@ def update_project_members(project_id):
     """Update project members"""
     data = request.json
     project = Project.query.get_or_404(project_id)
+    user_id = get_jwt_identity()
     
     # Expects a list of user IDs
     member_ids = data.get('member_ids', [])
+    
+    # Get existing member IDs before clearing
+    existing_member_ids = set([m.id for m in project.members])
+    new_member_ids = set(member_ids)
+    
+    # Find newly added members
+    added_member_ids = new_member_ids - existing_member_ids
     
     # Clear existing members
     project.members.clear()
@@ -200,9 +211,18 @@ def update_project_members(project_id):
     new_members = User.query.filter(User.id.in_(member_ids)).all()
     for user in new_members:
         project.members.append(user)
+    
+    # Notify newly added members
+    for member_id in added_member_ids:
+        create_notification(
+            member_id,
+            f"You have been added to project '{project.name}'",
+            "assignment",
+            project_id=project.id,
+            triggered_by=int(user_id)
+        )
         
     # Log activity
-    user_id = get_jwt_identity()
     log = ActivityLog(
         action=f"Updated members for project '{project.name}'. Total members: {len(new_members)}",
         user_id=int(user_id)
@@ -317,14 +337,19 @@ def create_task(project_id):
     if due_date and project.due_date and due_date > project.due_date:
         return jsonify({"msg": "Task due date cannot be after project due date"}), 400
     
+    # Get next task number for this project
+    max_task = Task.query.filter_by(project_id=project_id).order_by(Task.task_number.desc()).first()
+    next_task_number = (max_task.task_number + 1) if max_task else 1
+    
     task = Task(
+        project_id=project_id,
+        task_number=next_task_number,
         title=data['title'],
         description=data.get('description'),
         status=data.get('status', 'todo'),
         priority=data.get('priority', 'medium'),
         start_date=start_date,
         due_date=due_date,
-        project_id=project_id,
         assigned_to=data.get('assigned_to')
     )
     
@@ -333,28 +358,44 @@ def create_task(project_id):
     # Log activity
     user_id = get_jwt_identity()
     log = ActivityLog(
-        action=f"Created task '{task.title}'",
+        action=f"Created task #{next_task_number} '{task.title}'",
         user_id=user_id,
         project_id=project_id
     )
     db.session.add(log)
     
+    # Notify the assigned member
+    create_notification(
+        task.assigned_to,
+        f"You have been assigned to task #{next_task_number} '{task.title}' in project '{project.name}'",
+        "assignment",
+        task_project_id=project_id,
+        task_number=next_task_number,
+        project_id=project_id,
+        triggered_by=int(user_id)
+    )
+    
     db.session.commit()
-    return jsonify({"msg": "Task created", "task_id": task.id}), 201
+    return jsonify({"msg": "Task created", "project_id": project_id, "task_number": next_task_number}), 201
 
 
-@admin.route('/tasks/<int:task_id>', methods=['PUT'])
+@admin.route('/projects/<int:project_id>/tasks/<int:task_number>', methods=['PUT'])
 @jwt_required()
 @admin_required
-def update_task(task_id):
+def update_task(project_id, task_number):
     """Update a task"""
-    task = Task.query.get_or_404(task_id)
+    task = Task.query.get_or_404((project_id, task_number))
     data = request.json
     project = task.project
+    user_id = get_jwt_identity()
     
     # Validate assigned_to cannot be removed
     if 'assigned_to' in data and not data.get('assigned_to'):
         return jsonify({"msg": "Task must be assigned to a member"}), 400
+    
+    # Track if assignee changed
+    old_assigned_to = task.assigned_to
+    new_assigned_to = data.get('assigned_to', task.assigned_to)
     
     task.title = data.get('title', task.title)
     task.description = data.get('description', task.description)
@@ -377,13 +418,25 @@ def update_task(task_id):
     if data.get('completion_date'):
         task.completion_date = datetime.fromisoformat(data['completion_date'])
     
-    task.assigned_to = data.get('assigned_to', task.assigned_to)
+    task.assigned_to = new_assigned_to
+    
+    # Notify new assignee if assignment changed
+    if new_assigned_to and new_assigned_to != old_assigned_to:
+        create_notification(
+            new_assigned_to,
+            f"You have been assigned to task #{task_number} '{task.title}' in project '{project.name}'",
+            "assignment",
+            task_project_id=project_id,
+            task_number=task_number,
+            project_id=project.id,
+            triggered_by=int(user_id)
+        )
     
     # Log activity
-    user_id = get_jwt_identity()
     log = ActivityLog(
-        action=f"Updated task '{task.title}'",
-        user_id=int(user_id)
+        action=f"Updated task #{task_number} '{task.title}'",
+        user_id=int(user_id),
+        project_id=project_id
     )
     db.session.add(log)
     
@@ -391,12 +444,12 @@ def update_task(task_id):
     return jsonify({"msg": "Task updated"})
 
 
-@admin.route('/tasks/<int:task_id>', methods=['DELETE'])
+@admin.route('/projects/<int:project_id>/tasks/<int:task_number>', methods=['DELETE'])
 @jwt_required()
 @admin_required
-def delete_task(task_id):
+def delete_task(project_id, task_number):
     """Delete a task"""
-    task = Task.query.get_or_404(task_id)
+    task = Task.query.get_or_404((project_id, task_number))
     task_title = task.title
     
     db.session.delete(task)
@@ -404,8 +457,9 @@ def delete_task(task_id):
     # Log activity
     user_id = get_jwt_identity()
     log = ActivityLog(
-        action=f"Deleted task '{task_title}'",
-        user_id=int(user_id)
+        action=f"Deleted task #{task_number} '{task_title}'",
+        user_id=int(user_id),
+        project_id=project_id
     )
     db.session.add(log)
     
@@ -413,12 +467,54 @@ def delete_task(task_id):
     return jsonify({"msg": "Task deleted"})
 
 
-@admin.route('/tasks/<int:task_id>/approve', methods=['PUT'])
+@admin.route('/projects/<int:project_id>/tasks/<int:task_number>/comment', methods=['POST'])
 @jwt_required()
 @admin_required
-def approve_task_completion(task_id):
+def admin_add_comment(project_id, task_number):
+    """Admin adds a comment to a task"""
+    data = request.json
+    user_id = get_jwt_identity()
+    task = Task.query.get_or_404((project_id, task_number))
+    user = User.query.get(int(user_id))
+    
+    comment = Comment(
+        content=data['content'],
+        task_project_id=project_id,
+        task_number=task_number,
+        user_id=int(user_id)
+    )
+    db.session.add(comment)
+    
+    # Notify the assigned member about admin comment
+    if task.assigned_to:
+        create_notification(
+            task.assigned_to,
+            f"Admin commented on your task #{task_number} '{task.title}'",
+            "comment",
+            task_project_id=project_id,
+            task_number=task_number,
+            project_id=project_id,
+            triggered_by=int(user_id)
+        )
+    
+    # Log activity
+    log = ActivityLog(
+        action=f"Added comment to task #{task_number} '{task.title}'",
+        user_id=int(user_id),
+        project_id=project_id
+    )
+    db.session.add(log)
+    
+    db.session.commit()
+    return jsonify({"msg": "Comment added"})
+
+
+@admin.route('/projects/<int:project_id>/tasks/<int:task_number>/approve', methods=['PUT'])
+@jwt_required()
+@admin_required
+def approve_task_completion(project_id, task_number):
     """Approve a task completion (only for tasks in pending_review status)"""
-    task = Task.query.get_or_404(task_id)
+    task = Task.query.get_or_404((project_id, task_number))
     
     if task.status != 'pending_review':
         return jsonify({"msg": "Task is not pending review"}), 400
@@ -429,22 +525,34 @@ def approve_task_completion(task_id):
     # Log activity
     user_id = get_jwt_identity()
     log = ActivityLog(
-        action=f"Approved completion of task '{task.title}'",
+        action=f"Approved completion of task #{task_number} '{task.title}'",
         user_id=int(user_id),
-        project_id=task.project_id
+        project_id=project_id
     )
     db.session.add(log)
+    
+    # Notify the assigned member
+    if task.assigned_to:
+        create_notification(
+            task.assigned_to,
+            f"Your task #{task_number} '{task.title}' has been approved ✓",
+            "review",
+            task_project_id=project_id,
+            task_number=task_number,
+            project_id=project_id,
+            triggered_by=int(user_id)
+        )
     
     db.session.commit()
     return jsonify({"msg": "Task completion approved"})
 
 
-@admin.route('/tasks/<int:task_id>/reject', methods=['PUT'])
+@admin.route('/projects/<int:project_id>/tasks/<int:task_number>/reject', methods=['PUT'])
 @jwt_required()
 @admin_required
-def reject_task_completion(task_id):
+def reject_task_completion(project_id, task_number):
     """Reject a task completion and send back to in_progress"""
-    task = Task.query.get_or_404(task_id)
+    task = Task.query.get_or_404((project_id, task_number))
     
     if task.status != 'pending_review':
         return jsonify({"msg": "Task is not pending review"}), 400
@@ -460,21 +568,37 @@ def reject_task_completion(task_id):
     if rejection_reason:
         comment = Comment(
             content=f"⚠️ Task Rejected: {rejection_reason}",
-            task_id=task.id,
+            task_project_id=project_id,
+            task_number=task_number,
             user_id=int(user_id)
         )
         db.session.add(comment)
     
+    # Notify the assigned member
+    if task.assigned_to:
+        notify_msg = f"Your task #{task_number} '{task.title}' was sent back for revision"
+        if rejection_reason:
+            notify_msg += f": {rejection_reason}"
+        create_notification(
+            task.assigned_to,
+            notify_msg,
+            "review",
+            task_project_id=project_id,
+            task_number=task_number,
+            project_id=project_id,
+            triggered_by=int(user_id)
+        )
+    
     # Log activity with rejection reason if provided
     if rejection_reason:
-        action_msg = f"Rejected completion of task '{task.title}'. Reason: {rejection_reason}"
+        action_msg = f"Rejected completion of task #{task_number} '{task.title}'. Reason: {rejection_reason}"
     else:
-        action_msg = f"Rejected completion of task '{task.title}' - sent back for revision"
+        action_msg = f"Rejected completion of task #{task_number} '{task.title}' - sent back for revision"
     
     log = ActivityLog(
         action=action_msg,
         user_id=int(user_id),
-        project_id=task.project_id
+        project_id=project_id
     )
     db.session.add(log)
     
@@ -513,7 +637,8 @@ def get_all_tasks():
     
     return jsonify({
         "tasks": [{
-            "id": t.id,
+            "project_id": t.project_id,
+            "task_number": t.task_number,
             "title": t.title,
             "description": t.description,
             "status": t.status,
@@ -523,7 +648,6 @@ def get_all_tasks():
             "completion_date": t.completion_date.isoformat() if t.completion_date else None,
             "assigned_to": t.assigned_to,
             "assignee_name": User.query.get(t.assigned_to).name if t.assigned_to else None,
-            "project_id": t.project_id,
             "project_name": Project.query.get(t.project_id).name
         } for t in tasks]
     })
@@ -626,6 +750,14 @@ def upload_project_file(project_id):
             project_id=project_id
         )
         db.session.add(project_file)
+        
+        # Notify project members about new file
+        notify_project_members(
+            project_id,
+            f"New file '{file.filename}' uploaded to project '{project.name}'",
+            "file",
+            triggered_by=user.id
+        )
         
         # Log activity
         log = ActivityLog(

@@ -67,13 +67,13 @@ export async function deleteProjectFile(projectId, fileId, token) {
 }
 
 // Task Files
-export async function uploadTaskFile(taskId, file, token) {
+export async function uploadTaskFile(projectId, taskNumber, file, token) {
   const formData = new FormData();
   formData.append('file', file);
   
   try {
     const response = await axios.post(
-      `${API_BASE}/member/tasks/${taskId}/files`,
+      `${API_BASE}/member/projects/${projectId}/tasks/${taskNumber}/files`,
       formData,
       {
         headers: {
@@ -88,10 +88,10 @@ export async function uploadTaskFile(taskId, file, token) {
   }
 }
 
-export async function getTaskFiles(taskId, token) {
+export async function getTaskFiles(projectId, taskNumber, token) {
   try {
     const response = await axios.get(
-      `${API_BASE}/member/tasks/${taskId}/files`,
+      `${API_BASE}/member/projects/${projectId}/tasks/${taskNumber}/files`,
       {
         headers: { 'Authorization': `Bearer ${token}` }
       }
@@ -102,10 +102,10 @@ export async function getTaskFiles(taskId, token) {
   }
 }
 
-export async function deleteTaskFile(taskId, fileId, token) {
+export async function deleteTaskFile(projectId, taskNumber, fileId, token) {
   try {
     const response = await axios.delete(
-      `${API_BASE}/member/tasks/${taskId}/files/${fileId}`,
+      `${API_BASE}/member/projects/${projectId}/tasks/${taskNumber}/files/${fileId}`,
       {
         headers: { 'Authorization': `Bearer ${token}` }
       }

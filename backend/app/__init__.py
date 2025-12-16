@@ -26,12 +26,14 @@ def create_app():
 
     from . import models
     from .routes import main, admin, member, shared
+    from .routes.db import db_routes
     
     # Register all blueprints
     app.register_blueprint(main)
     app.register_blueprint(admin)
     app.register_blueprint(member)
     app.register_blueprint(shared)
+    app.register_blueprint(db_routes)
     
     # Ensure upload directories exist
     os.makedirs('/app/uploads/projects', exist_ok=True)

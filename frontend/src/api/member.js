@@ -22,8 +22,8 @@ export const getProjectTasks = async (projectId, token) => {
   return res.json();
 };
 
-export const updateTaskStatus = async (taskId, status, token) => {
-  const res = await fetch(`${BASE_URL}/tasks/${taskId}/status`, {
+export const updateTaskStatus = async (projectId, taskNumber, status, token) => {
+  const res = await fetch(`${BASE_URL}/projects/${projectId}/tasks/${taskNumber}/status`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ status })
@@ -31,8 +31,8 @@ export const updateTaskStatus = async (taskId, status, token) => {
   return res.json();
 };
 
-export const addComment = async (taskId, content, token) => {
-  const res = await fetch(`${BASE_URL}/tasks/${taskId}/comment`, {
+export const addComment = async (projectId, taskNumber, content, token) => {
+  const res = await fetch(`${BASE_URL}/projects/${projectId}/tasks/${taskNumber}/comment`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ content })
@@ -40,8 +40,8 @@ export const addComment = async (taskId, content, token) => {
   return res.json();
 };
 
-export const getTaskComments = async (taskId, token) => {
-  const res = await fetch(`${API_URL}/tasks/${taskId}/comments`, {
+export const getTaskComments = async (projectId, taskNumber, token) => {
+  const res = await fetch(`${API_URL}/projects/${projectId}/tasks/${taskNumber}/comments`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.json();

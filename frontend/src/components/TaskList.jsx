@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { getTaskComments, addComment, updateTaskStatus } from '../api/member';
-import { deleteTask, approveTaskCompletion, rejectTaskCompletion } from '../api/admin';
+import { deleteTask, approveTaskCompletion, rejectTaskCompletion, addAdminComment } from '../api/admin';
 import { getTaskFiles } from '../api/files';
 import TaskFileModal from './TaskFileModal';
 import ConfirmModal from './ConfirmModal';
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-const TaskItem = ({ task, onTaskUpdated, onTaskEdit }) => {
+const TaskItem = ({ task, onTaskUpdated, onTaskEdit, isHighlighted }) => {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
   const userId = parseInt(localStorage.getItem("userId"));
@@ -33,7 +33,7 @@ const TaskItem = ({ task, onTaskUpdated, onTaskEdit }) => {
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
 
   const fetchComments = async () => {
-    const res = await getTaskComments(task.id, token);
+    const res = await getTaskComments(task.project_id, task.task_number, token);
     setComments(res.comments);
     setCommentCount(res.comments.length);
   };
@@ -41,7 +41,7 @@ const TaskItem = ({ task, onTaskUpdated, onTaskEdit }) => {
   // Fetch comment count on mount
   useEffect(() => {
     fetchComments();
-  }, [task.id]);
+  }, [task.project_id, task.task_number]);
 
   // Update file count from task prop when it changes
   useEffect(() => {
@@ -50,29 +50,34 @@ const TaskItem = ({ task, onTaskUpdated, onTaskEdit }) => {
 
   const handleAddComment = async (e) => {
     e.preventDefault();
-    await addComment(task.id, newComment, token);
+    // Use admin comment API if admin, otherwise use member API
+    if (role === 'admin') {
+      await addAdminComment(task.project_id, task.task_number, newComment, token);
+    } else {
+      await addComment(task.project_id, task.task_number, newComment, token);
+    }
     setNewComment("");
     fetchComments();
   };
 
   const handleStatusChange = async (newStatus) => {
-    await updateTaskStatus(task.id, newStatus, token);
+    await updateTaskStatus(task.project_id, task.task_number, newStatus, token);
     onTaskUpdated();
   };
 
   const handleApproveTask = async () => {
-    await approveTaskCompletion(task.id, token);
+    await approveTaskCompletion(task.project_id, task.task_number, token);
     onTaskUpdated();
   };
 
   const handleRejectTask = async (reason) => {
-    await rejectTaskCompletion(task.id, reason, token);
+    await rejectTaskCompletion(task.project_id, task.task_number, reason, token);
     await fetchComments(); // Refresh comments to show rejection reason
     onTaskUpdated();
   };
 
   const handleDelete = async () => {
-    await deleteTask(task.id, token);
+    await deleteTask(task.project_id, task.task_number, token);
     onTaskUpdated();
   };
 
@@ -115,7 +120,7 @@ const TaskItem = ({ task, onTaskUpdated, onTaskEdit }) => {
     });
     
     try {
-      const files = await getTaskFiles(task.id, token);
+      const files = await getTaskFiles(task.project_id, task.task_number, token);
       setConfirmModal(prev => ({ ...prev, files }));
     } catch (error) {
       console.error("Error fetching files:", error);
@@ -212,7 +217,11 @@ const TaskItem = ({ task, onTaskUpdated, onTaskEdit }) => {
   const hasFiles = fileCount > 0;
 
   return (
-    <div className={`rounded-xl ${statusStyles.border} ${statusStyles.bg} border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden`}>
+    <div 
+      id={`task-${task.task_number}`}
+      className={`rounded-xl ${statusStyles.border} ${statusStyles.bg} border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${isHighlighted ? 'ring-4 ring-yellow-400 ring-opacity-75 animate-pulse-highlight' : ''}`}
+      style={isHighlighted ? { animation: 'highlight-pulse 0.5s ease-in-out 3' } : {}}
+    >
       {/* Main Content */}
       <div className="p-4">
         <div className="flex items-start justify-between gap-4">
@@ -346,7 +355,8 @@ const TaskItem = ({ task, onTaskUpdated, onTaskEdit }) => {
 
       {/* Task File Modal */}
       <TaskFileModal 
-        taskId={task.id} 
+        projectId={task.project_id}
+        taskNumber={task.task_number}
         taskTitle={task.title}
         isOpen={isFileModalOpen} 
         onClose={() => setIsFileModalOpen(false)}
@@ -467,11 +477,17 @@ const TaskItem = ({ task, onTaskUpdated, onTaskEdit }) => {
   );
 };
 
-const TaskList = ({ tasks, onTaskUpdated, onTaskEdit }) => {
+const TaskList = ({ tasks, onTaskUpdated, onTaskEdit, highlightedTask }) => {
   return (
     <div className="space-y-3">
       {tasks.map(t => (
-        <TaskItem key={t.id} task={t} onTaskUpdated={onTaskUpdated} onTaskEdit={onTaskEdit} />
+        <TaskItem 
+          key={`${t.project_id}-${t.task_number}`} 
+          task={t} 
+          onTaskUpdated={onTaskUpdated} 
+          onTaskEdit={onTaskEdit}
+          isHighlighted={highlightedTask === t.task_number}
+        />
       ))}
     </div>
   );

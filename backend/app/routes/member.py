@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, send_file
 from ..models import User, Project, Task, Comment, Attachment, ActivityLog, ProjectFile, db
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from .shared import notify_admins
 import os
 from werkzeug.utils import secure_filename
 
@@ -40,7 +41,8 @@ def project_tasks(project_id):
         return jsonify({"msg": "Access denied"}), 403
     
     tasks = [{
-        "id": t.id,
+        "project_id": t.project_id,
+        "task_number": t.task_number,
         "title": t.title,
         "description": t.description,
         "status": t.status,
@@ -78,7 +80,8 @@ def get_member_project_details(project_id):
             "priority": project.priority,
             "created_at": project.created_at.isoformat(),
             "tasks": [{
-                "id": t.id,
+                "project_id": t.project_id,
+                "task_number": t.task_number,
                 "title": t.title,
                 "description": t.description,
                 "status": t.status,
@@ -155,13 +158,13 @@ def get_my_tasks():
     
     return jsonify({
         "tasks": [{
-            "id": t.id,
+            "project_id": t.project_id,
+            "task_number": t.task_number,
             "title": t.title,
             "description": t.description,
             "status": t.status,
             "priority": t.priority,
             "due_date": t.due_date.isoformat() if t.due_date else None,
-            "project_id": t.project_id,
             "project_name": Project.query.get(t.project_id).name,
             "assigned_to": t.assigned_to,
             "assignee_name": User.query.get(t.assigned_to).name if t.assigned_to else None,
@@ -170,17 +173,18 @@ def get_my_tasks():
     })
 
 
-@member.route('/tasks/<int:task_id>/status', methods=['PUT'])
+@member.route('/projects/<int:project_id>/tasks/<int:task_number>/status', methods=['PUT'])
 @jwt_required()
-def update_task_status(task_id):
+def update_task_status(project_id, task_number):
     """Update task status (member can only update assigned tasks)"""
     user_id = get_jwt_identity()
-    task = Task.query.get_or_404(task_id)
+    task = Task.query.get_or_404((project_id, task_number))
     if task.assigned_to != int(user_id):
         return jsonify({"msg": "Not authorized"}), 403
     
     data = request.json
     new_status = data.get('status', task.status)
+    user = User.query.get(int(user_id))
     
     # Members cannot directly complete a task - they submit for review
     if new_status == 'completed':
@@ -190,14 +194,32 @@ def update_task_status(task_id):
     
     # Log activity with appropriate message
     if new_status == 'pending_review':
-        action_msg = f"Submitted task '{task.title}' for review"
+        action_msg = f"Submitted task #{task_number} '{task.title}' for review"
+        # Notify admins about task submission for review
+        notify_admins(
+            f"{user.name} submitted task #{task_number} '{task.title}' for review",
+            "task_status",
+            task_project_id=project_id,
+            task_number=task_number,
+            project_id=project_id,
+            triggered_by=int(user_id)
+        )
     else:
-        action_msg = f"Updated task '{task.title}' status to '{task.status}'"
+        action_msg = f"Updated task #{task_number} '{task.title}' status to '{task.status}'"
+        # Notify admins about status change
+        notify_admins(
+            f"{user.name} changed task #{task_number} '{task.title}' status to '{new_status}'",
+            "task_status",
+            task_project_id=project_id,
+            task_number=task_number,
+            project_id=project_id,
+            triggered_by=int(user_id)
+        )
     
     log = ActivityLog(
         action=action_msg,
         user_id=int(user_id),
-        project_id=task.project_id
+        project_id=project_id
     )
     db.session.add(log)
     
@@ -209,25 +231,38 @@ def update_task_status(task_id):
 # ============ COMMENT ROUTES ===========
 # ======================================
 
-@member.route('/tasks/<int:task_id>/comment', methods=['POST'])
+@member.route('/projects/<int:project_id>/tasks/<int:task_number>/comment', methods=['POST'])
 @jwt_required()
-def add_comment(task_id):
+def add_comment(project_id, task_number):
     """Add a comment to a task"""
     data = request.json
     user_id = get_jwt_identity()
-    task = Task.query.get_or_404(task_id)
+    task = Task.query.get_or_404((project_id, task_number))
+    user = User.query.get(int(user_id))
     
     comment = Comment(
         content=data['content'],
-        task_id=task.id,
+        task_project_id=project_id,
+        task_number=task_number,
         user_id=int(user_id)
     )
     db.session.add(comment)
     
+    # Notify admins about new comment
+    notify_admins(
+        f"{user.name} commented on task #{task_number} '{task.title}'",
+        "comment",
+        task_project_id=project_id,
+        task_number=task_number,
+        project_id=project_id,
+        triggered_by=int(user_id)
+    )
+    
     # Log activity
     log = ActivityLog(
-        action=f"Added comment to task '{task.title}'",
-        user_id=int(user_id)
+        action=f"Added comment to task #{task_number} '{task.title}'",
+        user_id=int(user_id),
+        project_id=project_id
     )
     db.session.add(log)
     
@@ -239,17 +274,18 @@ def add_comment(task_id):
 # ============ ATTACHMENT ROUTES ========
 # ======================================
 
-@member.route('/tasks/<int:task_id>/attachment', methods=['POST'])
+@member.route('/projects/<int:project_id>/tasks/<int:task_number>/attachment', methods=['POST'])
 @jwt_required()
-def add_attachment(task_id):
+def add_attachment(project_id, task_number):
     """Add an attachment to a task"""
     data = request.json
     user_id = get_jwt_identity()
-    task = Task.query.get_or_404(task_id)
+    task = Task.query.get_or_404((project_id, task_number))
     attachment = Attachment(
         filename=data['filename'],
         file_url=data['file_url'],
-        task_id=task.id
+        task_project_id=project_id,
+        task_number=task_number
     )
     db.session.add(attachment)
     db.session.commit()
@@ -268,11 +304,11 @@ ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@member.route('/tasks/<int:task_id>/files', methods=['POST'])
+@member.route('/projects/<int:project_id>/tasks/<int:task_number>/files', methods=['POST'])
 @jwt_required()
-def upload_task_file(task_id):
+def upload_task_file(project_id, task_number):
     """Upload a file to a task (member can only upload to their assigned task)"""
-    task = Task.query.get(task_id)
+    task = Task.query.get((project_id, task_number))
     if not task:
         return jsonify({"msg": "Task not found"}), 404
     
@@ -307,15 +343,26 @@ def upload_task_file(task_id):
             filename=file.filename,
             file_url=f"/uploads/tasks/{filename}",
             uploaded_by=user.id,
-            task_id=task_id
+            task_project_id=project_id,
+            task_number=task_number
         )
         db.session.add(attachment)
         
+        # Notify admins about new file
+        notify_admins(
+            f"{user.name} uploaded file '{file.filename}' to task #{task_number} '{task.title}'",
+            "file",
+            task_project_id=project_id,
+            task_number=task_number,
+            project_id=project_id,
+            triggered_by=user.id
+        )
+        
         # Log activity
         log = ActivityLog(
-            action=f"Uploaded file '{file.filename}' to task '{task.title}'",
+            action=f"Uploaded file '{file.filename}' to task #{task_number} '{task.title}'",
             user_id=user.id,
-            project_id=task.project_id
+            project_id=project_id
         )
         db.session.add(log)
         db.session.commit()
@@ -334,11 +381,11 @@ def upload_task_file(task_id):
         db.session.rollback()
         return jsonify({"msg": f"Error uploading file: {str(e)}"}), 500
 
-@member.route('/tasks/<int:task_id>/files', methods=['GET'])
+@member.route('/projects/<int:project_id>/tasks/<int:task_number>/files', methods=['GET'])
 @jwt_required()
-def get_task_files(task_id):
+def get_task_files(project_id, task_number):
     """Get all files for a task (member can view if project member, admin can always view)"""
-    task = Task.query.get(task_id)
+    task = Task.query.get((project_id, task_number))
     if not task:
         return jsonify({"msg": "Task not found"}), 404
     
@@ -349,7 +396,7 @@ def get_task_files(task_id):
     if user.role != 'admin' and user not in task.project.members:
         return jsonify({"msg": "Access denied"}), 403
     
-    files = Attachment.query.filter_by(task_id=task_id).all()
+    files = Attachment.query.filter_by(task_project_id=project_id, task_number=task_number).all()
     return jsonify({
         "files": [{
             "id": f.id,
@@ -360,15 +407,15 @@ def get_task_files(task_id):
         } for f in files]
     })
 
-@member.route('/tasks/<int:task_id>/files/<int:file_id>', methods=['DELETE'])
+@member.route('/projects/<int:project_id>/tasks/<int:task_number>/files/<int:file_id>', methods=['DELETE'])
 @jwt_required()
-def delete_task_file(task_id, file_id):
+def delete_task_file(project_id, task_number, file_id):
     """Delete a file from a task (only uploader or admin can delete)"""
-    task = Task.query.get(task_id)
+    task = Task.query.get((project_id, task_number))
     if not task:
         return jsonify({"msg": "Task not found"}), 404
     
-    attachment = Attachment.query.filter_by(id=file_id, task_id=task_id).first()
+    attachment = Attachment.query.filter_by(id=file_id, task_project_id=project_id, task_number=task_number).first()
     if not attachment:
         return jsonify({"msg": "File not found"}), 404
     

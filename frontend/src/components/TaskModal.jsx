@@ -53,7 +53,7 @@ const TaskModal = ({ projectId, members, taskToEdit, isOpen, onClose, onTaskSave
 
     try {
       if (taskToEdit) {
-        await updateTask(taskToEdit.id, taskData, token);
+        await updateTask(taskToEdit.project_id, taskToEdit.task_number, taskData, token);
       } else {
         await createTask(projectId, taskData, token);
       }

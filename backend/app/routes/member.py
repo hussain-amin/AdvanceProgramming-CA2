@@ -163,6 +163,8 @@ def get_my_tasks():
             "due_date": t.due_date.isoformat() if t.due_date else None,
             "project_id": t.project_id,
             "project_name": Project.query.get(t.project_id).name,
+            "assigned_to": t.assigned_to,
+            "assignee_name": User.query.get(t.assigned_to).name if t.assigned_to else None,
             "attachments_count": len(t.attachments)
         } for t in tasks]
     })

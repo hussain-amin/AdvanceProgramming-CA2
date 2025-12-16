@@ -304,6 +304,10 @@ def create_task(project_id):
     project = Project.query.get_or_404(project_id)
     data = request.json
     
+    # Validate assigned_to is required
+    if not data.get('assigned_to'):
+        return jsonify({"msg": "Task must be assigned to a member"}), 400
+    
     start_date = datetime.fromisoformat(data['start_date']) if data.get('start_date') else None
     due_date = datetime.fromisoformat(data['due_date']) if data.get('due_date') else None
     
@@ -347,6 +351,10 @@ def update_task(task_id):
     task = Task.query.get_or_404(task_id)
     data = request.json
     project = task.project
+    
+    # Validate assigned_to cannot be removed
+    if 'assigned_to' in data and not data.get('assigned_to'):
+        return jsonify({"msg": "Task must be assigned to a member"}), 400
     
     task.title = data.get('title', task.title)
     task.description = data.get('description', task.description)

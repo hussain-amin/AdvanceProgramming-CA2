@@ -108,13 +108,14 @@ const TaskModal = ({ projectId, members, taskToEdit, isOpen, onClose, onTaskSave
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To <span className="text-red-500">*</span></label>
               <select
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                 value={task.assigned_to}
                 onChange={(e) => setTask({ ...task, assigned_to: e.target.value })}
+                required
               >
-                <option value="">Unassigned</option>
+                <option value="">Select a member</option>
                 {members.map((member) => (
                   <option key={member.id} value={member.id}>
                     {member.name}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getProfile, updateProfile } from "../api/auth";
+import { getProfile, updateProfile } from "../../api/auth";
 
 const ProfileUpdate = () => {
   const token = localStorage.getItem("token");

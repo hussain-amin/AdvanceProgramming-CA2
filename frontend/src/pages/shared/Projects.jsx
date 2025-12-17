@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "../../components/Sidebar";
 import ProjectCard from "../../components/ProjectCard";
-import ProjectModal from "../../components/ProjectModal"; // New import
+import ProjectModal from "../../components/ProjectModal";
 import { getMemberProjects } from "../../api/member";
 import { getProjects } from "../../api/admin";
 
@@ -12,7 +12,7 @@ const Projects = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false); // New state for modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOngoingExpanded, setIsOngoingExpanded] = useState(true);
   const [isCompletedExpanded, setIsCompletedExpanded] = useState(true);
 

@@ -271,6 +271,40 @@
   color: #718096;
 }
 
+.member-task-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.task-tag {
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.task-tag.assigned {
+  background: #e2e8f0;
+  color: #4a5568;
+}
+
+.task-tag.in-progress {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.task-tag.pending {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.task-tag.completed {
+  background: #d1fae5;
+  color: #059669;
+}
+
 .role-badge {
   background: #edf2f7;
   color: #4a5568;

@@ -24,8 +24,8 @@ const ProjectDetails = () => {
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
-  const [taskToEdit, setTaskToEdit] = useState(null); // New state for editing
-  const [sortKey, setSortKey] = useState('due_date'); // New state for sorting
+  const [taskToEdit, setTaskToEdit] = useState(null);
+  const [sortKey, setSortKey] = useState('due_date');
   const [projectFiles, setProjectFiles] = useState([]);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [isFileUploadModalOpen, setIsFileUploadModalOpen] = useState(false);

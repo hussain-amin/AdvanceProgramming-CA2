@@ -13,13 +13,10 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log("Fetching projects and members...");
         const [projData, membData] = await Promise.all([
           getProjects(token),
           getMembers(token),
         ]);
-        console.log("Projects:", projData);
-        console.log("Members:", membData);
         setProjects(projData.projects || []);
         setMembers(membData.members || []);
       } catch (err) {
@@ -116,6 +113,22 @@ const AdminDashboard = () => {
                   <div>
                     <h4>{member.name}</h4>
                     <p>{member.email}</p>
+                    {member.task_counts && (
+                      <div className="member-task-tags">
+                        <span className="task-tag assigned">
+                          Assigned: {member.task_counts.assigned}
+                        </span>
+                        <span className="task-tag in-progress">
+                          In Progress: {member.task_counts.in_progress}
+                        </span>
+                        <span className="task-tag pending">
+                          Pending: {member.task_counts.pending_review}
+                        </span>
+                        <span className="task-tag completed">
+                          Completed: {member.task_counts.completed}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <span className="role-badge">{member.role}</span>

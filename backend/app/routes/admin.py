@@ -241,14 +241,29 @@ def update_project_members(project_id):
 @jwt_required()
 @admin_required
 def get_members():
-    """Get all members"""
+    """Get all members with task counts"""
     members = User.query.filter_by(role='member').all()
-    return jsonify({"members": [{
-        "id": u.id,
-        "name": u.name,
-        "email": u.email,
-        "role": u.role
-    } for u in members]})
+    result = []
+    for u in members:
+        # Count tasks by status for this member
+        assigned_count = Task.query.filter_by(assigned_to=u.id).filter(Task.status.in_(['todo'])).count()
+        in_progress_count = Task.query.filter_by(assigned_to=u.id, status='in_progress').count()
+        pending_review_count = Task.query.filter_by(assigned_to=u.id, status='pending_review').count()
+        completed_count = Task.query.filter_by(assigned_to=u.id, status='completed').count()
+        
+        result.append({
+            "id": u.id,
+            "name": u.name,
+            "email": u.email,
+            "role": u.role,
+            "task_counts": {
+                "assigned": assigned_count,
+                "in_progress": in_progress_count,
+                "pending_review": pending_review_count,
+                "completed": completed_count
+            }
+        })
+    return jsonify({"members": result})
 
 
 @admin.route('/members', methods=['POST'])
@@ -662,6 +677,8 @@ def get_all_tasks():
 @admin_required
 def get_report_stats():
     """Get report statistics"""
+    from datetime import datetime
+    
     # 1. Summary Counts
     total_projects = Project.query.count()
     total_tasks = Task.query.count()
@@ -678,24 +695,60 @@ def get_report_stats():
     # 4. Completion Rate
     completed_tasks = status_data.get('completed', 0)
     completion_rate = round((completed_tasks / total_tasks * 100), 1) if total_tasks > 0 else 0
+    
+    # 5. Overdue Tasks Count
+    overdue_tasks = Task.query.filter(
+        Task.due_date < datetime.utcnow(),
+        Task.status.notin_(['completed'])
+    ).count()
+    
+    # 6. Top Performers (members with most completed tasks)
+    top_performers = db.session.query(
+        User.id, User.name, db.func.count(Task.task_number).label('completed_count')
+    ).join(Task, Task.assigned_to == User.id).filter(
+        Task.status == 'completed'
+    ).group_by(User.id, User.name).order_by(db.desc('completed_count')).limit(5).all()
+    
+    top_performers_data = [
+        {"id": p[0], "name": p[1], "completed": p[2]} for p in top_performers
+    ]
+    
+    # 7. Project Progress (completion % for each project)
+    projects = Project.query.all()
+    project_progress = []
+    for p in projects:
+        total = len(p.tasks)
+        completed = len([t for t in p.tasks if t.status == 'completed'])
+        progress = round((completed / total * 100), 1) if total > 0 else 0
+        project_progress.append({
+            "id": p.id,
+            "name": p.name,
+            "total_tasks": total,
+            "completed_tasks": completed,
+            "progress": progress
+        })
 
     return jsonify({
         "summary": {
             "total_projects": total_projects,
             "total_tasks": total_tasks,
             "total_members": total_members,
-            "completion_rate": completion_rate
+            "completion_rate": completion_rate,
+            "overdue_tasks": overdue_tasks
         },
         "status_distribution": [
-            {"name": "To Do", "value": status_data.get('todo', 0), "color": "#FF8042"},
-            {"name": "In Progress", "value": status_data.get('in_progress', 0), "color": "#0088FE"},
-            {"name": "Completed", "value": status_data.get('completed', 0), "color": "#00C49F"}
+            {"name": "To Do", "value": status_data.get('todo', 0), "color": "#94a3b8"},
+            {"name": "In Progress", "value": status_data.get('in_progress', 0), "color": "#f59e0b"},
+            {"name": "Pending Review", "value": status_data.get('pending_review', 0), "color": "#8b5cf6"},
+            {"name": "Completed", "value": status_data.get('completed', 0), "color": "#10b981"}
         ],
         "priority_distribution": [
-            {"name": "Low", "value": priority_data.get('low', 0)},
-            {"name": "Medium", "value": priority_data.get('medium', 0)},
-            {"name": "High", "value": priority_data.get('high', 0)}
-        ]
+            {"name": "Low", "value": priority_data.get('Low', 0) + priority_data.get('low', 0)},
+            {"name": "Medium", "value": priority_data.get('Medium', 0) + priority_data.get('medium', 0)},
+            {"name": "High", "value": priority_data.get('High', 0) + priority_data.get('high', 0)}
+        ],
+        "top_performers": top_performers_data,
+        "project_progress": project_progress
     })
 
 

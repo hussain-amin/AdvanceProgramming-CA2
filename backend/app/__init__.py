@@ -1,14 +1,12 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from flask_migrate import Migrate
 import os
 from flask_jwt_extended import JWTManager
 
 
 
 db = SQLAlchemy()
-migrate = Migrate()
 jwt = JWTManager()
 
 def create_app():
@@ -22,7 +20,6 @@ def create_app():
     app.secret_key = os.getenv('SECRET_KEY', 'supersecret')
 
     db.init_app(app)
-    migrate.init_app(app, db)
 
     from . import models
     from .routes import main, admin, member, shared
@@ -38,5 +35,9 @@ def create_app():
     # Ensure upload directories exist
     os.makedirs('/app/uploads/projects', exist_ok=True)
     os.makedirs('/app/uploads/tasks', exist_ok=True)
+    
+    # Create all database tables from models
+    with app.app_context():
+        db.create_all()
 
     return app

@@ -2,7 +2,6 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 const ProjectCard = ({ project }) => {
-  // console.log("this is the name:", project.name);
   const getPriorityColor = (priority) => {
     switch (priority.toLowerCase()) {
       case 'high': return 'bg-red-500';

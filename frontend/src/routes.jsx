@@ -8,8 +8,8 @@ import Projects from "./pages/shared/Projects";
 import ProjectDetails from "./pages/shared/ProjectDetails";
 import Members from "./pages/admin/Members";
 import Reports from "./pages/admin/Reports";
-import ProfileUpdate from "./pages/ProfileUpdate";
-import Login from "./pages/Login";
+import ProfileUpdate from "./pages/shared/ProfileUpdate";
+import Login from "./pages/shared/Login";
 
 // Inner component that uses useLocation
 function MainContent({ token, role, userName }) {

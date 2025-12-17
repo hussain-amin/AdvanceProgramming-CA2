@@ -74,7 +74,7 @@ const AdminDashboard = () => {
           <div className="projects-grid">
             {projects.slice(0, 3).map((project) => (
               <div key={project.id} className="project-card">
-                <h3>{project.name}</h3>
+                <h3><span style={{ color: '#6366f1' }}>#{project.id}</span> {project.name}</h3>
                 <p className="project-description">{project.description}</p>
                 <div className="project-meta">
                   <span className="priority-badge" style={{ background: getPriorityColor(project.priority) }}>

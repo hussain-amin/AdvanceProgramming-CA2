@@ -229,7 +229,7 @@ const TaskItem = ({ task, onTaskUpdated, onTaskEdit, isHighlighted }) => {
           <div className="flex-1 min-w-0">
             {/* Title Row with Files Button */}
             <div className="flex items-center gap-2 mb-2">
-              <h4 className="text-base font-semibold text-slate-800 truncate">{task.title}</h4>
+              <h4 className="text-base font-semibold text-slate-800 truncate"><span className="text-indigo-600">#{task.task_number}</span> {task.title}</h4>
               {/* Files Button */}
               <button
                 onClick={() => setIsFileModalOpen(true)}
@@ -254,12 +254,20 @@ const TaskItem = ({ task, onTaskUpdated, onTaskEdit, isHighlighted }) => {
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getPriorityStyles(task.priority)}`}>
                 {task.priority}
               </span>
-              {task.due_date && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+              {task.start_date && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  {new Date(task.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                  Start: {new Date(task.start_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                </span>
+              )}
+              {task.due_date && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-600 border border-orange-200">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Due: {new Date(task.due_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                 </span>
               )}
             </div>

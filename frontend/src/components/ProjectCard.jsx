@@ -17,7 +17,7 @@ const ProjectCard = ({ project }) => {
       <div className="p-5">
         <div className="flex justify-between items-start mb-3">
           <h3 className="text-xl font-bold text-gray-800 truncate">
-            {project.title}
+            <span className="text-indigo-600">#{project.id}</span> {project.name}
           </h3>
           <span className={`px-3 py-1 text-xs font-semibold text-white rounded-full ${getPriorityColor(project.priority)}`}>
             {project.priority}

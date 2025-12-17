@@ -33,7 +33,7 @@ def get_projects():
     projects = Project.query.all()
     return jsonify({"projects": [{
         "id": p.id,
-        "title": p.name,
+        "name": p.name,
         "description": p.description,
         "start_date": p.start_date.isoformat() if p.start_date else None,
         "due_date": p.due_date.isoformat() if p.due_date else None,

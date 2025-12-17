@@ -97,7 +97,7 @@ const ProjectDetails = () => {
   }, [project, searchParams]);
 
   const handleDeleteProject = async () => {
-    if (window.confirm(`Are you sure you want to delete project: ${project.name}?`)) {
+    if (window.confirm(`Are you sure you want to delete project #${project.id}: ${project.name}?`)) {
       await deleteProject(id, token);
       navigate('/projects'); // Redirect to projects list after deletion
     }
@@ -184,7 +184,7 @@ const ProjectDetails = () => {
         <div className="grid grid-cols-3 gap-6 mb-8">
           {/* Project Info */}
           <div className="col-span-2 p-4 bg-white rounded-lg shadow-md border border-gray-200 max-h-48 overflow-y-auto">
-            <h1 className="text-2xl font-bold mb-2">{project.name}</h1>
+            <h1 className="text-2xl font-bold mb-2"><span className="text-indigo-600">#{project.id}</span> {project.name}</h1>
             <p className="text-gray-600 text-sm whitespace-pre-wrap break-words">{project.description}</p>
           </div>
 
